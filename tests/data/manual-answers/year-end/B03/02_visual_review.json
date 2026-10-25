@@ -1,0 +1,9 @@
+{
+ "looks_correct": true,
+ "concerns": [
+  {
+   "severity": "info",
+   "description": "The cover title is drawn at the original 22pt size, left aligned like before."
+  }
+ ]
+}

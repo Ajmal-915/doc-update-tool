@@ -1,0 +1,18 @@
+{
+ "region_type": "table_cell",
+ "risks": [
+  {
+   "type": "table_line",
+   "description": "value column rule at about x=321pt"
+  }
+ ],
+ "recommended_method": "original_box",
+ "confidence": 0.85,
+ "notes": "Replacement is slightly shorter than the current label; nothing follows it in the cell.",
+ "boundary_px": {
+  "x0": 108.8,
+  "y0": 853.3,
+  "x1": 657.3,
+  "y1": 889.2
+ }
+}

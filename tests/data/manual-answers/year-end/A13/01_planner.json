@@ -1,0 +1,17 @@
+{
+ "chosen_method": "horizontal_expansion",
+ "fallback_methods": [
+  "reduced_font"
+ ],
+ "parameters": {
+  "boundary_x": 521.99,
+  "font_scale": 0.95
+ },
+ "rejected_methods": [
+  {
+   "method": "original_box",
+   "reason": "needs 112.2pt, the box is 106.7pt"
+  }
+ ],
+ "reason": "Last line of the paragraph has room to the right; only the closing full stop moves 5.5pt."
+}

@@ -1,0 +1,9 @@
+{
+ "looks_correct": true,
+ "concerns": [
+  {
+   "severity": "info",
+   "description": "GROSS PROFIT is set in the same bold font on the same baseline; the label ends 8.7pt earlier, inside the cell."
+  }
+ ]
+}

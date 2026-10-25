@@ -1,0 +1,204 @@
+{
+ "note": "hand-built Converse responses for offline end-to-end tests",
+ "responses": [
+  {
+   "role": "vision",
+   "response": {
+    "output": {
+     "message": {
+      "role": "assistant",
+      "content": [
+       {
+        "text": "Here is my answer."
+       },
+       {
+        "toolUse": {
+         "toolUseId": "tooluse_report_space_analysis",
+         "name": "report_space_analysis",
+         "input": {
+          "region_type": "paragraph",
+          "boundary_px": {
+           "x0": 140.0,
+           "y0": 160.0,
+           "x1": 1160.0,
+           "y1": 230.0
+          },
+          "risks": [],
+          "recommended_method": "horizontal_expansion",
+          "confidence": 0.8,
+          "notes": "Body paragraph, ragged right edge, nothing to the right of the line."
+         }
+        }
+       }
+      ]
+     }
+    },
+    "stopReason": "tool_use",
+    "usage": {
+     "inputTokens": 3900,
+     "outputTokens": 220,
+     "totalTokens": 4120
+    },
+    "metrics": {
+     "latencyMs": 1800
+    }
+   }
+  },
+  {
+   "role": "planner",
+   "response": {
+    "output": {
+     "message": {
+      "role": "assistant",
+      "content": [
+       {
+        "reasoningContent": {
+         "reasoningText": {
+          "text": "",
+          "signature": "sig"
+         }
+        }
+       },
+       {
+        "text": "Here is my answer."
+       },
+       {
+        "toolUse": {
+         "toolUseId": "tooluse_submit_plan",
+         "name": "submit_plan",
+         "input": {
+          "chosen_method": "horizontal_expansion",
+          "fallback_methods": [
+           "paragraph_reflow"
+          ],
+          "parameters": {
+           "boundary_x": 540.0
+          },
+          "rejected_methods": [],
+          "reason": "the line has room on the right"
+         }
+        }
+       }
+      ]
+     }
+    },
+    "stopReason": "tool_use",
+    "usage": {
+     "inputTokens": 5200,
+     "outputTokens": 300,
+     "totalTokens": 5500
+    },
+    "metrics": {
+     "latencyMs": 1800
+    }
+   }
+  },
+  {
+   "role": "coder",
+   "response": {
+    "output": {
+     "message": {
+      "role": "assistant",
+      "content": [
+       {
+        "text": "Here is my answer."
+       },
+       {
+        "toolUse": {
+         "toolUseId": "tooluse_submit_script",
+         "name": "submit_script",
+         "input": {
+          "script": "import json\nimport pikepdf\nimport pdf_ops\n\ndoc = pdf_ops.open(\"input.pdf\")\ntarget = pdf_ops.find_target(doc, 1, \"two working days\")\nbox = target.bbox\npage = doc.pdf.pages[0]\ncover = \"q 1 g %.2f %.2f %.2f %.2f re f Q\" % (box.x0, box.y0, box.width, box.height)\npage.contents_add(doc.pdf.make_stream(cover.encode(\"ascii\")), prepend=False)\npdf_ops.write_text(doc, target, \"three working days\", box.x0, box.y0 + 2.4)\npdf_ops.save(doc, \"output.pdf\")\nprint(json.dumps({\"method\": \"horizontal_expansion\", \"note\": \"covered and redrawn\"}))\n",
+          "notes": ""
+         }
+        }
+       }
+      ]
+     }
+    },
+    "stopReason": "tool_use",
+    "usage": {
+     "inputTokens": 4800,
+     "outputTokens": 600,
+     "totalTokens": 5400
+    },
+    "metrics": {
+     "latencyMs": 1800
+    }
+   }
+  },
+  {
+   "role": "coder",
+   "response": {
+    "output": {
+     "message": {
+      "role": "assistant",
+      "content": [
+       {
+        "text": "Here is my answer."
+       },
+       {
+        "toolUse": {
+         "toolUseId": "tooluse_submit_script",
+         "name": "submit_script",
+         "input": {
+          "script": "import json\nimport pdf_ops\n\ndoc = pdf_ops.open(\"input.pdf\")\ntarget = pdf_ops.find_target(doc, 1, \"two working days\")\nresult = pdf_ops.expand_horizontal(doc, target, \"three working days\", boundary=529.9)\npdf_ops.save(doc, \"output.pdf\")\nprint(json.dumps(result.to_dict()))\n",
+          "notes": ""
+         }
+        }
+       }
+      ]
+     }
+    },
+    "stopReason": "tool_use",
+    "usage": {
+     "inputTokens": 4800,
+     "outputTokens": 600,
+     "totalTokens": 5400
+    },
+    "metrics": {
+     "latencyMs": 1800
+    }
+   }
+  },
+  {
+   "role": "visual_review",
+   "response": {
+    "output": {
+     "message": {
+      "role": "assistant",
+      "content": [
+       {
+        "text": "Here is my answer."
+       },
+       {
+        "toolUse": {
+         "toolUseId": "tooluse_report_visual_review",
+         "name": "report_visual_review",
+         "input": {
+          "looks_correct": true,
+          "concerns": [
+           {
+            "severity": "info",
+            "description": "The following words moved slightly to the right; spacing looks even."
+           }
+          ]
+         }
+        }
+       }
+      ]
+     }
+    },
+    "stopReason": "tool_use",
+    "usage": {
+     "inputTokens": 3000,
+     "outputTokens": 120,
+     "totalTokens": 3120
+    },
+    "metrics": {
+     "latencyMs": 1800
+    }
+   }
+  }
+ ]
+}

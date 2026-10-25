@@ -1,0 +1,22 @@
+{
+ "region_type": "table_of_contents_line",
+ "risks": [
+  {
+   "type": "dot_leader",
+   "description": "dot leaders start immediately after the entry title"
+  },
+  {
+   "type": "adjacent_text",
+   "description": "page number 5 at the right margin"
+  }
+ ],
+ "recommended_method": "original_box",
+ "confidence": 0.8,
+ "notes": "Same letters re-ordered (S before the apostrophe); the entry must keep its width so the dot leaders stay where they are.",
+ "boundary_px": {
+  "x0": 152.1,
+  "y0": 244.0,
+  "x1": 341.5,
+  "y1": 274.0
+ }
+}

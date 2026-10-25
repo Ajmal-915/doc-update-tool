@@ -1,0 +1,12 @@
+{
+ "chosen_method": "original_box",
+ "fallback_methods": [],
+ "parameters": {},
+ "rejected_methods": [
+  {
+   "method": "horizontal_expansion",
+   "reason": "dot leaders follow the title"
+  }
+ ],
+ "reason": "Same letters in a different order: 90.04pt in a 90.27pt box, so the dot leaders and page number stay where they are."
+}

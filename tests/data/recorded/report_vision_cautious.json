@@ -1,0 +1,168 @@
+{
+ "note": "hand-built Converse responses for offline end-to-end tests",
+ "responses": [
+  {
+   "role": "vision",
+   "response": {
+    "output": {
+     "message": {
+      "role": "assistant",
+      "content": [
+       {
+        "text": "Here is my answer."
+       },
+       {
+        "toolUse": {
+         "toolUseId": "tooluse_report_space_analysis",
+         "name": "report_space_analysis",
+         "input": {
+          "region_type": "table_cell",
+          "boundary_px": {
+           "x0": 140.0,
+           "y0": 160.0,
+           "x1": 1160.0,
+           "y1": 230.0
+          },
+          "risks": [
+           {
+            "type": "table_line",
+            "description": "cell border right of the text"
+           }
+          ],
+          "recommended_method": "reduced_font",
+          "confidence": 0.8,
+          "notes": "Body paragraph, ragged right edge, nothing to the right of the line."
+         }
+        }
+       }
+      ]
+     }
+    },
+    "stopReason": "tool_use",
+    "usage": {
+     "inputTokens": 3900,
+     "outputTokens": 220,
+     "totalTokens": 4120
+    },
+    "metrics": {
+     "latencyMs": 1800
+    }
+   }
+  },
+  {
+   "role": "planner",
+   "response": {
+    "output": {
+     "message": {
+      "role": "assistant",
+      "content": [
+       {
+        "reasoningContent": {
+         "reasoningText": {
+          "text": "",
+          "signature": "sig"
+         }
+        }
+       },
+       {
+        "text": "Here is my answer."
+       },
+       {
+        "toolUse": {
+         "toolUseId": "tooluse_submit_plan",
+         "name": "submit_plan",
+         "input": {
+          "chosen_method": "reduced_font",
+          "fallback_methods": [],
+          "parameters": {
+           "font_scale": 0.92
+          },
+          "rejected_methods": [],
+          "reason": "fits in the original box"
+         }
+        }
+       }
+      ]
+     }
+    },
+    "stopReason": "tool_use",
+    "usage": {
+     "inputTokens": 5200,
+     "outputTokens": 300,
+     "totalTokens": 5500
+    },
+    "metrics": {
+     "latencyMs": 1800
+    }
+   }
+  },
+  {
+   "role": "coder",
+   "response": {
+    "output": {
+     "message": {
+      "role": "assistant",
+      "content": [
+       {
+        "text": "Here is my answer."
+       },
+       {
+        "toolUse": {
+         "toolUseId": "tooluse_submit_script",
+         "name": "submit_script",
+         "input": {
+          "script": "import json\nimport pdf_ops\n\ndoc = pdf_ops.open(\"input.pdf\")\ntarget = pdf_ops.find_target(doc, 1, \"Annually\")\nresult = pdf_ops.replace_with_scale(doc, target, \"Annually,\", min_scale=0.9)\npdf_ops.save(doc, \"output.pdf\")\nprint(json.dumps(result.to_dict()))\n",
+          "notes": ""
+         }
+        }
+       }
+      ]
+     }
+    },
+    "stopReason": "tool_use",
+    "usage": {
+     "inputTokens": 4800,
+     "outputTokens": 600,
+     "totalTokens": 5400
+    },
+    "metrics": {
+     "latencyMs": 1800
+    }
+   }
+  },
+  {
+   "role": "visual_review",
+   "response": {
+    "output": {
+     "message": {
+      "role": "assistant",
+      "content": [
+       {
+        "text": "Here is my answer."
+       },
+       {
+        "toolUse": {
+         "toolUseId": "tooluse_report_visual_review",
+         "name": "report_visual_review",
+         "input": {
+          "looks_correct": true,
+          "concerns": []
+         }
+        }
+       }
+      ]
+     }
+    },
+    "stopReason": "tool_use",
+    "usage": {
+     "inputTokens": 3000,
+     "outputTokens": 120,
+     "totalTokens": 3120
+    },
+    "metrics": {
+     "latencyMs": 1800
+    }
+   }
+  }
+ ]
+}

@@ -1,0 +1,4 @@
+{
+ "script": "import json\nimport pdf_ops\n\nPAGE = 7\nTARGET_TEXT = 'for reference only'\nNEAR = [74.03, 631.99, 484.34, 658.51]\nREPLACEMENT = 'for general reference purposes only'\n\ndoc = pdf_ops.open(\"input.pdf\")\ntarget = pdf_ops.find_target(doc, PAGE, TARGET_TEXT, near=NEAR)\n\nok, missing = pdf_ops.glyphs_available(target.font, REPLACEMENT)\nif not ok:\n    raise pdf_ops.MissingGlyphsError(\"characters missing from the embedded font\", missing)\nBOUNDARY = 521.988\nMAX_BOTTOM = 42.061\nfit = pdf_ops.fit_reflow(doc, target, REPLACEMENT, boundary=BOUNDARY, max_bottom=MAX_BOTTOM)\nif not fit.feasible:\n    raise pdf_ops.DoesNotFitError(fit.reason)\nresult = pdf_ops.reflow_paragraph(doc, target, REPLACEMENT, boundary=BOUNDARY, max_bottom=MAX_BOTTOM)\npdf_ops.save(doc, \"output.pdf\")\nprint(json.dumps(result.to_dict()))\n",
+ "notes": "paragraph_reflow as planned"
+}

@@ -1,0 +1,7 @@
+{
+ "chosen_method": "form_field_update",
+ "fallback_methods": [],
+ "parameters": {},
+ "rejected_methods": [],
+ "reason": "The cover title is the BUSINESS NAME field; the new value (217pt at 22pt) fits the 525pt wide field at the original size."
+}

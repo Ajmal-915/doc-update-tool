@@ -1,0 +1,18 @@
+{
+ "region_type": "paragraph",
+ "risks": [
+  {
+   "type": "adjacent_text",
+   "description": "\"on the website are for\" follows on the same line and must move right"
+  }
+ ],
+ "recommended_method": "horizontal_expansion",
+ "confidence": 0.85,
+ "notes": "First line of the disclaimer ends near 484pt; the paragraph edge is about 522pt.",
+ "boundary_px": {
+  "x0": 154.2,
+  "y0": 276.0,
+  "x1": 1087.5,
+  "y1": 306.2
+ }
+}

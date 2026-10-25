@@ -1,0 +1,9 @@
+{
+ "looks_correct": true,
+ "concerns": [
+  {
+   "severity": "info",
+   "description": "The longer label stays well left of the value column; spacing between words looks even."
+  }
+ ]
+}

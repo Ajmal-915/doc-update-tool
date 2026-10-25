@@ -1,0 +1,13 @@
+{
+ "region_type": "heading",
+ "risks": [],
+ "recommended_method": "horizontal_expansion",
+ "confidence": 0.85,
+ "notes": "Section heading in a large light font with empty space to the right up to the margin.",
+ "boundary_px": {
+  "x0": 143.8,
+  "y0": 133.3,
+  "x1": 1200.0,
+  "y1": 174.0
+ }
+}

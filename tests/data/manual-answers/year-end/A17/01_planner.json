@@ -1,0 +1,7 @@
+{
+ "chosen_method": "original_box",
+ "fallback_methods": [],
+ "parameters": {},
+ "rejected_methods": [],
+ "reason": "The new label is 7.2pt shorter and nothing follows it in the cell."
+}

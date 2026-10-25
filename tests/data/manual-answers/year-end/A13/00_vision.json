@@ -1,0 +1,18 @@
+{
+ "region_type": "paragraph",
+ "risks": [
+  {
+   "type": "adjacent_text",
+   "description": "the closing full stop follows the phrase on the same line"
+  }
+ ],
+ "recommended_method": "horizontal_expansion",
+ "confidence": 0.85,
+ "notes": "Last line of the disclaimer paragraph; plenty of room to the right up to the paragraph edge at about 522pt.",
+ "boundary_px": {
+  "x0": 154.2,
+  "y0": 422.9,
+  "x1": 1087.5,
+  "y1": 453.1
+ }
+}

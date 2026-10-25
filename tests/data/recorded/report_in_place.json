@@ -1,0 +1,163 @@
+{
+ "note": "hand-built Converse responses for offline end-to-end tests",
+ "responses": [
+  {
+   "role": "vision",
+   "response": {
+    "output": {
+     "message": {
+      "role": "assistant",
+      "content": [
+       {
+        "text": "Here is my answer."
+       },
+       {
+        "toolUse": {
+         "toolUseId": "tooluse_report_space_analysis",
+         "name": "report_space_analysis",
+         "input": {
+          "region_type": "paragraph",
+          "boundary_px": {
+           "x0": 140.0,
+           "y0": 160.0,
+           "x1": 1160.0,
+           "y1": 230.0
+          },
+          "risks": [],
+          "recommended_method": "original_box",
+          "confidence": 0.8,
+          "notes": "Body paragraph, ragged right edge, nothing to the right of the line."
+         }
+        }
+       }
+      ]
+     }
+    },
+    "stopReason": "tool_use",
+    "usage": {
+     "inputTokens": 3900,
+     "outputTokens": 220,
+     "totalTokens": 4120
+    },
+    "metrics": {
+     "latencyMs": 1800
+    }
+   }
+  },
+  {
+   "role": "planner",
+   "response": {
+    "output": {
+     "message": {
+      "role": "assistant",
+      "content": [
+       {
+        "reasoningContent": {
+         "reasoningText": {
+          "text": "",
+          "signature": "sig"
+         }
+        }
+       },
+       {
+        "text": "Here is my answer."
+       },
+       {
+        "toolUse": {
+         "toolUseId": "tooluse_submit_plan",
+         "name": "submit_plan",
+         "input": {
+          "chosen_method": "original_box",
+          "fallback_methods": [
+           "horizontal_expansion"
+          ],
+          "parameters": {},
+          "rejected_methods": [],
+          "reason": "fits in the original box"
+         }
+        }
+       }
+      ]
+     }
+    },
+    "stopReason": "tool_use",
+    "usage": {
+     "inputTokens": 5200,
+     "outputTokens": 300,
+     "totalTokens": 5500
+    },
+    "metrics": {
+     "latencyMs": 1800
+    }
+   }
+  },
+  {
+   "role": "coder",
+   "response": {
+    "output": {
+     "message": {
+      "role": "assistant",
+      "content": [
+       {
+        "text": "Here is my answer."
+       },
+       {
+        "toolUse": {
+         "toolUseId": "tooluse_submit_script",
+         "name": "submit_script",
+         "input": {
+          "script": "import json\nimport pdf_ops\n\nPAGE = 1\nTARGET_TEXT = \"financial year ending 31 December 2023\"\nREPLACEMENT = \"financial year ending 31 December 2024\"\n\ndoc = pdf_ops.open(\"input.pdf\")\ntarget = pdf_ops.find_target(doc, PAGE, TARGET_TEXT, near=[150.0, 690.0, 450.0, 715.0])\nok, missing = pdf_ops.glyphs_available(target.font, REPLACEMENT)\nif not ok:\n    raise pdf_ops.MissingGlyphsError(\"missing glyphs\", missing)\nresult = pdf_ops.replace_in_place(doc, target, REPLACEMENT)\npdf_ops.save(doc, \"output.pdf\")\nprint(json.dumps(result.to_dict()))\n",
+          "notes": ""
+         }
+        }
+       }
+      ]
+     }
+    },
+    "stopReason": "tool_use",
+    "usage": {
+     "inputTokens": 4800,
+     "outputTokens": 600,
+     "totalTokens": 5400
+    },
+    "metrics": {
+     "latencyMs": 1800
+    }
+   }
+  },
+  {
+   "role": "visual_review",
+   "response": {
+    "output": {
+     "message": {
+      "role": "assistant",
+      "content": [
+       {
+        "text": "Here is my answer."
+       },
+       {
+        "toolUse": {
+         "toolUseId": "tooluse_report_visual_review",
+         "name": "report_visual_review",
+         "input": {
+          "looks_correct": true,
+          "concerns": []
+         }
+        }
+       }
+      ]
+     }
+    },
+    "stopReason": "tool_use",
+    "usage": {
+     "inputTokens": 3000,
+     "outputTokens": 120,
+     "totalTokens": 3120
+    },
+    "metrics": {
+     "latencyMs": 1800
+    }
+   }
+  }
+ ]
+}

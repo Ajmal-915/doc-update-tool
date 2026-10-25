@@ -1,0 +1,9 @@
+{
+ "looks_correct": true,
+ "concerns": [
+  {
+   "severity": "info",
+   "description": "The first line now ends about 41pt earlier; the next line was not pulled up, so the paragraph has a shorter first line."
+  }
+ ]
+}

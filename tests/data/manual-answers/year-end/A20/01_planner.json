@@ -1,0 +1,17 @@
+{
+ "chosen_method": "horizontal_expansion",
+ "fallback_methods": [
+  "reduced_font"
+ ],
+ "parameters": {
+  "boundary_x": 576.0,
+  "font_scale": 0.98
+ },
+ "rejected_methods": [
+  {
+   "method": "original_box",
+   "reason": "needs 146.3pt, the box is 143.4pt"
+  }
+ ],
+ "reason": "The heading grows by 2.9pt into the empty space on its right, same font and size."
+}

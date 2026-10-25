@@ -1,0 +1,9 @@
+{
+ "looks_correct": true,
+ "concerns": [
+  {
+   "severity": "info",
+   "description": "The word changed inside the flattened form text; the rest of the line moved 2.7pt right and stays inside the paragraph."
+  }
+ ]
+}

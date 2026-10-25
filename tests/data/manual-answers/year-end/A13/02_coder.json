@@ -1,0 +1,4 @@
+{
+ "script": "import json\nimport pdf_ops\n\nPAGE = 7\nTARGET_TEXT = 'strictly at your own risk'\nNEAR = [213.26, 575.58, 319.98, 587.94]\nREPLACEMENT = 'entirely at your own risk'\n\ndoc = pdf_ops.open(\"input.pdf\")\ntarget = pdf_ops.find_target(doc, PAGE, TARGET_TEXT, near=NEAR)\n\nok, missing = pdf_ops.glyphs_available(target.font, REPLACEMENT)\nif not ok:\n    raise pdf_ops.MissingGlyphsError(\"characters missing from the embedded font\", missing)\nBOUNDARY = 521.988  # right edge from the plan; never past it\nfit = pdf_ops.fit_horizontal(doc, target, REPLACEMENT, BOUNDARY)\nif not fit.feasible:\n    raise pdf_ops.DoesNotFitError(fit.reason)\nresult = pdf_ops.expand_horizontal(doc, target, REPLACEMENT, boundary=BOUNDARY)\npdf_ops.save(doc, \"output.pdf\")\nprint(json.dumps(result.to_dict()))\n",
+ "notes": "horizontal_expansion as planned"
+}

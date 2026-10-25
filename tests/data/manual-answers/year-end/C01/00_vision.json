@@ -1,0 +1,18 @@
+{
+ "region_type": "paragraph",
+ "risks": [
+  {
+   "type": "adjacent_text",
+   "description": "[NAME OF COMPANY] follows on the same line and must move with the longer word"
+  }
+ ],
+ "recommended_method": "horizontal_expansion",
+ "confidence": 0.8,
+ "notes": "Body paragraph (flattened form text), ragged right edge; the line has room up to the paragraph edge at about 571pt.",
+ "boundary_px": {
+  "x0": 113.5,
+  "y0": 350.0,
+  "x1": 1189.6,
+  "y1": 380.2
+ }
+}

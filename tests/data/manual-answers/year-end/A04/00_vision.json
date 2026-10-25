@@ -1,0 +1,18 @@
+{
+ "region_type": "table_cell",
+ "risks": [
+  {
+   "type": "table_line",
+   "description": "the replacement is much longer than the label column and would run into the value column at x=321pt"
+  }
+ ],
+ "recommended_method": "manual_review",
+ "confidence": 0.9,
+ "notes": "About 313pt of text for a cell that is about 258pt wide; it cannot fit on one line and the row cannot grow.",
+ "boundary_px": {
+  "x0": 108.8,
+  "y0": 1016.7,
+  "x1": 657.3,
+  "y1": 1053.3
+ }
+}

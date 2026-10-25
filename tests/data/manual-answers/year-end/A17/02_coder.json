@@ -1,0 +1,4 @@
+{
+ "script": "import json\nimport pdf_ops\n\nPAGE = 4\nTARGET_TEXT = 'Amortization of Purchased Intangible Assets'\nNEAR = [57.23, 368.43, 247.07, 379.62]\nREPLACEMENT = 'Amortization of Acquired Intangible Assets'\n\ndoc = pdf_ops.open(\"input.pdf\")\ntarget = pdf_ops.find_target(doc, PAGE, TARGET_TEXT, near=NEAR)\n\nok, missing = pdf_ops.glyphs_available(target.font, REPLACEMENT)\nif not ok:\n    raise pdf_ops.MissingGlyphsError(\"characters missing from the embedded font\", missing)\nfit = pdf_ops.fit_in_place(doc, target, REPLACEMENT)\nif not fit.feasible:\n    raise pdf_ops.DoesNotFitError(fit.reason)\nresult = pdf_ops.replace_in_place(doc, target, REPLACEMENT)\npdf_ops.save(doc, \"output.pdf\")\nprint(json.dumps(result.to_dict()))\n",
+ "notes": "original_box as planned"
+}

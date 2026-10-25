@@ -1,0 +1,225 @@
+{
+  "pack": "synthetic year-end style pack",
+  "scenarios": [
+    {
+      "id": "A01",
+      "title": "Date change inside a paragraph (same width)",
+      "pdf": "report.pdf",
+      "page": 1,
+      "source_text": "financial year ending 31 December 2023",
+      "replacement": "financial year ending 31 December 2024",
+      "expected_safe_result": {
+        "status": "updated"
+      }
+    },
+    {
+      "id": "A02",
+      "title": "macOS-style PDF: 1 Tf with the size in the text matrix, TJ kerning",
+      "pdf": "report_mac.pdf",
+      "page": 1,
+      "source_text": "financial year ending 31 December 2023",
+      "replacement": "financial year ending 31 December 2024",
+      "expected_safe_result": {
+        "status": "updated"
+      }
+    },
+    {
+      "id": "A03",
+      "title": "Type0 / Identity-H font",
+      "pdf": "report_type0.pdf",
+      "page": 1,
+      "source_text": "within 30 days",
+      "replacement": "within 28 days",
+      "expected_safe_result": {
+        "status": "updated"
+      }
+    },
+    {
+      "id": "B01",
+      "title": "Line can grow into the ragged right edge",
+      "pdf": "report.pdf",
+      "page": 1,
+      "source_text": "each month",
+      "replacement": "each calendar month",
+      "expected_safe_result": {
+        "status": "updated"
+      }
+    },
+    {
+      "id": "B02",
+      "title": "Table cell with room before the rule",
+      "pdf": "report.pdf",
+      "page": 1,
+      "source_text": "Annually",
+      "replacement": "Annually in May",
+      "expected_safe_result": {
+        "status": "updated"
+      }
+    },
+    {
+      "id": "C01",
+      "title": "Table-of-contents line with dot leaders: only a slightly smaller size is possible",
+      "pdf": "report_type0.pdf",
+      "page": 1,
+      "source_text": "Section 4 Data protection",
+      "replacement": "Section 4 Data protections",
+      "expected_safe_result": {
+        "status": "updated"
+      }
+    },
+    {
+      "id": "C02",
+      "title": "Table-of-contents line, replacement far too long",
+      "pdf": "report.pdf",
+      "page": 1,
+      "source_text": "Section 4 Data protection",
+      "replacement": "Section 4 Data protection and information security management",
+      "expected_safe_result": {
+        "status": "manual_review"
+      }
+    },
+    {
+      "id": "D01",
+      "title": "Text drawn as vector graphics",
+      "pdf": "graphic_text.pdf",
+      "page": 1,
+      "source_text": "Total 2023",
+      "replacement": "Total 2024",
+      "expected_safe_result": {
+        "status": "manual_review"
+      }
+    },
+    {
+      "id": "D02",
+      "title": "Scanned page with an OCR layer",
+      "pdf": "scanned.pdf",
+      "page": 1,
+      "source_text": "31 December 2023",
+      "replacement": "31 December 2024",
+      "expected_safe_result": {
+        "status": "manual_review"
+      }
+    },
+    {
+      "id": "E01",
+      "title": "Form-field value",
+      "pdf": "form.pdf",
+      "page": 1,
+      "source_text": "Compliance team",
+      "replacement": "Compliance and Risk team",
+      "expected_safe_result": {
+        "status": "updated"
+      }
+    },
+    {
+      "id": "F01",
+      "title": "Digitally signed PDF",
+      "pdf": "signed.pdf",
+      "page": 1,
+      "source_text": "31 December 2023",
+      "replacement": "31 December 2024",
+      "expected_safe_result": {
+        "status": "manual_review"
+      }
+    },
+    {
+      "id": "G01",
+      "title": "Phrase occurs twice on the page",
+      "pdf": "report.pdf",
+      "page": 2,
+      "source_text": "The policy applies to all",
+      "replacement": "The policy applies to every",
+      "expected_safe_result": {
+        "status": "manual_review"
+      }
+    },
+    {
+      "id": "H01",
+      "title": "Source text not in the document",
+      "pdf": "report.pdf",
+      "page": 1,
+      "source_text": "The annual bonus pool is approved by the remuneration committee",
+      "replacement": "x",
+      "expected_safe_result": {
+        "status": "manual_review"
+      }
+    },
+    {
+      "id": "H02",
+      "title": "Replacement needs a letter the embedded subset font does not contain",
+      "pdf": "report.pdf",
+      "page": 1,
+      "source_text": "31 December 2023",
+      "replacement": "31 Dezember 2024",
+      "expected_safe_result": {
+        "status": "manual_review"
+      }
+    },
+    {
+      "id": "R01",
+      "title": "Paragraph reflow using free space below",
+      "pdf": "report.pdf",
+      "page": 1,
+      "source_text": "within 30 days of joining",
+      "replacement": "within 30 calendar days of joining the organisation",
+      "expected_safe_result": {
+        "status": "updated"
+      }
+    },
+    {
+      "id": "R02",
+      "title": "Paragraph would need more space than is free",
+      "pdf": "report.pdf",
+      "page": 1,
+      "source_text": "within 30 days of joining",
+      "replacement": "within 30 days of joining, or within 10 working days for staff in high-risk roles such as procurement, sales and finance, with refresher training every year for everyone and a record kept in the training system",
+      "expected_safe_result": {
+        "status": "manual_review"
+      }
+    },
+    {
+      "id": "X01",
+      "title": "Source text differs in case and dash",
+      "pdf": "report.pdf",
+      "page": 1,
+      "source_text": "ALL STAFF MUST COMPLETE THE ANTI–BRIBERY TRAINING",
+      "replacement": "All staff must complete the anti-corruption training",
+      "expected_safe_result": {
+        "status": "updated"
+      }
+    },
+    {
+      "id": "X02",
+      "title": "Text is on the next page",
+      "pdf": "report.pdf",
+      "page": 1,
+      "source_text": "Revenue grew by 12%",
+      "replacement": "Revenue grew by 14%",
+      "expected_safe_result": {
+        "status": "updated"
+      }
+    },
+    {
+      "id": "S01",
+      "title": "Two pages share one content stream",
+      "pdf": "shared_stream.pdf",
+      "page": 1,
+      "source_text": "31 December 2023",
+      "replacement": "31 December 2024",
+      "expected_safe_result": {
+        "status": "updated"
+      }
+    },
+    {
+      "id": "S02",
+      "title": "Header XObject drawn twice on the page: ambiguous",
+      "pdf": "xobject.pdf",
+      "page": 1,
+      "source_text": "internal use only",
+      "replacement": "internal use",
+      "expected_safe_result": {
+        "status": "manual_review"
+      }
+    }
+  ]
+}

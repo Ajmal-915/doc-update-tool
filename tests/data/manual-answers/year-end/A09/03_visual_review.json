@@ -1,0 +1,9 @@
+{
+ "looks_correct": true,
+ "concerns": [
+  {
+   "severity": "info",
+   "description": "The entry keeps its width, so the dot leaders and page number are unchanged."
+  }
+ ]
+}

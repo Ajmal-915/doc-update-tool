@@ -1,0 +1,9 @@
+{
+ "looks_correct": true,
+ "concerns": [
+  {
+   "severity": "info",
+   "description": "Only the word It changed to In on one line of the field; the rest of the line moved 2.7pt right."
+  }
+ ]
+}

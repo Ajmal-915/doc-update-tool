@@ -1,0 +1,7 @@
+{
+ "chosen_method": "original_box",
+ "fallback_methods": [],
+ "parameters": {},
+ "rejected_methods": [],
+ "reason": "The phrase ends the first line; the shorter wording fits in place and the line ends earlier."
+}

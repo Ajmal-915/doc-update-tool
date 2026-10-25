@@ -1,0 +1,9 @@
+{
+ "looks_correct": true,
+ "concerns": [
+  {
+   "severity": "info",
+   "description": "The heading now uses a curly apostrophe like the rest of the document; same font and size."
+  }
+ ]
+}

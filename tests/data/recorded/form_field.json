@@ -1,0 +1,118 @@
+{
+ "note": "hand-built Converse responses for offline end-to-end tests",
+ "responses": [
+  {
+   "role": "planner",
+   "response": {
+    "output": {
+     "message": {
+      "role": "assistant",
+      "content": [
+       {
+        "reasoningContent": {
+         "reasoningText": {
+          "text": "",
+          "signature": "sig"
+         }
+        }
+       },
+       {
+        "text": "Here is my answer."
+       },
+       {
+        "toolUse": {
+         "toolUseId": "tooluse_submit_plan",
+         "name": "submit_plan",
+         "input": {
+          "chosen_method": "form_field_update",
+          "fallback_methods": [],
+          "parameters": {},
+          "rejected_methods": [],
+          "reason": "the target is a form-field value"
+         }
+        }
+       }
+      ]
+     }
+    },
+    "stopReason": "tool_use",
+    "usage": {
+     "inputTokens": 5200,
+     "outputTokens": 300,
+     "totalTokens": 5500
+    },
+    "metrics": {
+     "latencyMs": 1800
+    }
+   }
+  },
+  {
+   "role": "coder",
+   "response": {
+    "output": {
+     "message": {
+      "role": "assistant",
+      "content": [
+       {
+        "text": "Here is my answer."
+       },
+       {
+        "toolUse": {
+         "toolUseId": "tooluse_submit_script",
+         "name": "submit_script",
+         "input": {
+          "script": "import json\nimport pdf_ops\n\nresult = None\ndoc = pdf_ops.open(\"input.pdf\")\nresult = pdf_ops.update_form_field(doc, \"PolicyName\", \"Anti-bribery policy 2024\", min_scale=0.9)\npdf_ops.save(doc, \"output.pdf\")\nprint(json.dumps(result))\n",
+          "notes": ""
+         }
+        }
+       }
+      ]
+     }
+    },
+    "stopReason": "tool_use",
+    "usage": {
+     "inputTokens": 4800,
+     "outputTokens": 600,
+     "totalTokens": 5400
+    },
+    "metrics": {
+     "latencyMs": 1800
+    }
+   }
+  },
+  {
+   "role": "visual_review",
+   "response": {
+    "output": {
+     "message": {
+      "role": "assistant",
+      "content": [
+       {
+        "text": "Here is my answer."
+       },
+       {
+        "toolUse": {
+         "toolUseId": "tooluse_report_visual_review",
+         "name": "report_visual_review",
+         "input": {
+          "looks_correct": true,
+          "concerns": []
+         }
+        }
+       }
+      ]
+     }
+    },
+    "stopReason": "tool_use",
+    "usage": {
+     "inputTokens": 3000,
+     "outputTokens": 120,
+     "totalTokens": 3120
+    },
+    "metrics": {
+     "latencyMs": 1800
+    }
+   }
+  }
+ ]
+}

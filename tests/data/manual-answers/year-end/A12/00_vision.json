@@ -1,0 +1,22 @@
+{
+ "region_type": "table_of_contents_line",
+ "risks": [
+  {
+   "type": "dot_leader",
+   "description": "dot leaders follow the title directly; a shorter title leaves a visible gap before them"
+  },
+  {
+   "type": "adjacent_text",
+   "description": "page number 6 at the right margin"
+  }
+ ],
+ "recommended_method": "original_box",
+ "confidence": 0.6,
+ "notes": "Only possible if the gap left before the dot leaders stays small.",
+ "boundary_px": {
+  "x0": 152.1,
+  "y0": 293.1,
+  "x1": 302.9,
+  "y1": 322.9
+ }
+}

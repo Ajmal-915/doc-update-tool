@@ -1,0 +1,18 @@
+{
+ "chosen_method": "horizontal_expansion",
+ "fallback_methods": [],
+ "parameters": {
+  "boundary_x": 521.99
+ },
+ "rejected_methods": [
+  {
+   "method": "original_box",
+   "reason": "needs 84.1pt, the box is 54.0pt"
+  },
+  {
+   "method": "reduced_font",
+   "reason": "would need 156% of the space"
+  }
+ ],
+ "reason": "The first line ends near 484pt; it grows by 30.2pt to about 514pt, inside the paragraph edge at 522pt."
+}

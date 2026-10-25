@@ -1,0 +1,23 @@
+{
+ "chosen_method": "paragraph_reflow",
+ "fallback_methods": [],
+ "parameters": {
+  "boundary_x": 521.99,
+  "use_free_space_below": true
+ },
+ "rejected_methods": [
+  {
+   "method": "original_box",
+   "reason": "phrase wraps across two lines and is twice as long"
+  },
+  {
+   "method": "horizontal_expansion",
+   "reason": "needs 173.6pt, only 117.9pt available"
+  },
+  {
+   "method": "reduced_font",
+   "reason": "would need 209% of the space"
+  }
+ ],
+ "reason": "The phrase wraps across a line break and the new wording is longer, so the disclaimer must be rewrapped in the same font and line spacing within its own edges; the line count stays at 6."
+}

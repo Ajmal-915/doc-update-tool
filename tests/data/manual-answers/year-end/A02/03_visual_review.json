@@ -1,0 +1,9 @@
+{
+ "looks_correct": true,
+ "concerns": [
+  {
+   "severity": "info",
+   "description": "The label is shorter; cell rules and neighbouring labels are unchanged."
+  }
+ ]
+}

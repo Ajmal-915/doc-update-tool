@@ -1,0 +1,17 @@
+{
+ "chosen_method": "horizontal_expansion",
+ "fallback_methods": [
+  "reduced_font"
+ ],
+ "parameters": {
+  "boundary_x": 571.05,
+  "font_scale": 0.957
+ },
+ "rejected_methods": [
+  {
+   "method": "original_box",
+   "reason": "In is 2.7pt wider than It"
+  }
+ ],
+ "reason": "The rest of the line moves 2.7pt right; the line stays well inside the paragraph edge at 571pt."
+}

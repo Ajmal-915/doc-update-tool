@@ -1,0 +1,20 @@
+{
+ "chosen_method": "original_box",
+ "fallback_methods": [
+  "horizontal_expansion"
+ ],
+ "parameters": {
+  "boundary_x": 315.47
+ },
+ "rejected_methods": [
+  {
+   "method": "reduced_font",
+   "reason": "not needed, the replacement fits at full size"
+  },
+  {
+   "method": "paragraph_reflow",
+   "reason": "table label, not a paragraph"
+  }
+ ],
+ "reason": "GROSS PROFIT is slightly narrower than GROSS MARGIN and nothing follows the label in its cell, so it fits the original box in the same bold font."
+}

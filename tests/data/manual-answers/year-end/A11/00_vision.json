@@ -1,0 +1,22 @@
+{
+ "region_type": "table_of_contents_line",
+ "risks": [
+  {
+   "type": "dot_leader",
+   "description": "dot leaders follow the title directly"
+  },
+  {
+   "type": "adjacent_text",
+   "description": "page number 3 at the right margin"
+  }
+ ],
+ "recommended_method": "manual_review",
+ "confidence": 0.9,
+ "notes": "The longer title would run over the dot leaders; the TOC line must be regenerated in the source document.",
+ "boundary_px": {
+  "x0": 152.1,
+  "y0": 147.1,
+  "x1": 366.7,
+  "y1": 177.1
+ }
+}

@@ -1,0 +1,22 @@
+{
+ "region_type": "table_cell",
+ "risks": [
+  {
+   "type": "table_line",
+   "description": "vertical rule of the grey value column at about x=321pt right of the label cell"
+  },
+  {
+   "type": "table_line",
+   "description": "row rules directly above and below the label"
+  }
+ ],
+ "recommended_method": "horizontal_expansion",
+ "confidence": 0.85,
+ "notes": "Bold label in the first column of the financial table; plenty of free space inside the cell up to the value column.",
+ "boundary_px": {
+  "x0": 108.8,
+  "y0": 632.9,
+  "x1": 657.3,
+  "y1": 668.8
+ }
+}

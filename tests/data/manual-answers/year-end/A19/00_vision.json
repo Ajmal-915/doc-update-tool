@@ -1,0 +1,18 @@
+{
+ "region_type": "paragraph",
+ "risks": [
+  {
+   "type": "margin",
+   "description": "the line already reaches the right margin"
+  }
+ ],
+ "recommended_method": "original_box",
+ "confidence": 0.85,
+ "notes": "The phrase ends the full-width first line; the replacement is shorter, so it fits in place and the line simply ends earlier.",
+ "boundary_px": {
+  "x0": 107.3,
+  "y0": 662.5,
+  "x1": 1190.8,
+  "y1": 692.7
+ }
+}

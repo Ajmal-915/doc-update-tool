@@ -1,0 +1,7 @@
+{
+ "chosen_method": "form_field_update",
+ "fallback_methods": [],
+ "parameters": {},
+ "rejected_methods": [],
+ "reason": "Remove the duplicated word inside the EXECUTIVE SUMMARY field; the line gets shorter, so it stays inside the field."
+}

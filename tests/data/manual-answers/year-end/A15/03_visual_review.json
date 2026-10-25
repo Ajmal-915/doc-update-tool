@@ -1,0 +1,9 @@
+{
+ "looks_correct": true,
+ "concerns": [
+  {
+   "severity": "info",
+   "description": "The first line grows by about 30pt and stays inside the paragraph edge."
+  }
+ ]
+}

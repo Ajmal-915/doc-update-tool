@@ -1,0 +1,9 @@
+{
+ "looks_correct": true,
+ "concerns": [
+  {
+   "severity": "info",
+   "description": "Shorter label in the same font; nothing else in the row moved."
+  }
+ ]
+}

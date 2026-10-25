@@ -1,0 +1,9 @@
+{
+ "looks_correct": true,
+ "concerns": [
+  {
+   "severity": "info",
+   "description": "The duplicated word was removed; that line of the field is now shorter and the following lines are unchanged."
+  }
+ ]
+}

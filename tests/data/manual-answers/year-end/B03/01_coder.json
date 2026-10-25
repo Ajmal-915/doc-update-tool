@@ -1,0 +1,4 @@
+{
+ "script": "import json\nimport pdf_ops\n\nFIELD_NAME = 'BUSINESS NAME'\nOLD_TEXT = 'COMPANY NAME'\nSTART = 0\nEND = 12\nREPLACEMENT = 'NORTHWIND GROUP'\n\ndoc = pdf_ops.open(\"input.pdf\")\nfield = pdf_ops.find_field(doc, FIELD_NAME)\nvalue = field.value\nif value[START:END] != OLD_TEXT:\n    raise pdf_ops.TargetNotFoundError(\"the field value no longer contains the expected text at the given position\")\nnew_value = value[:START] + REPLACEMENT + value[END:]\nresult = pdf_ops.update_form_field(doc, FIELD_NAME, new_value, min_scale=0.9)\npdf_ops.save(doc, \"output.pdf\")\nprint(json.dumps({\"method\": \"form_field_update\", \"field\": FIELD_NAME, \"changed\": [OLD_TEXT, REPLACEMENT],\n                  \"widgets\": result[\"widgets\"]}))\n",
+ "notes": "form_field_update as planned"
+}

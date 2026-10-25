@@ -1,0 +1,12 @@
+{
+ "chosen_method": "form_field_update",
+ "fallback_methods": [],
+ "parameters": {},
+ "rejected_methods": [
+  {
+   "method": "original_box",
+   "reason": "the text is a form-field value, not page content"
+  }
+ ],
+ "reason": "The typo is inside the EXECUTIVE SUMMARY text field; update the value and its appearance. Same number of letters, one word changes on one line."
+}

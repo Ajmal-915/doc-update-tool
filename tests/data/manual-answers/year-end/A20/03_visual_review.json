@@ -1,0 +1,9 @@
+{
+ "looks_correct": true,
+ "concerns": [
+  {
+   "severity": "info",
+   "description": "The heading grows by about 3pt into empty space; same light font and size."
+  }
+ ]
+}

@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+docs/
+dist/
+tests/data/scenario_results/
+tests/data/year-end-test-pack/
+tests/data/generated-cases/
+tests/data/recorded/live/
+tests/data/manual-answers/**/*.png
+tests/data/manual-answers/**/*.request.md

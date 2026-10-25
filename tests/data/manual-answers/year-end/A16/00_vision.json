@@ -1,0 +1,13 @@
+{
+ "region_type": "heading",
+ "risks": [],
+ "recommended_method": "original_box",
+ "confidence": 0.85,
+ "notes": "Section heading with nothing to its right; same letters re-ordered.",
+ "boundary_px": {
+  "x0": 143.8,
+  "y0": 85.4,
+  "x1": 1200.0,
+  "y1": 126.0
+ }
+}

@@ -1,0 +1,9 @@
+{
+ "looks_correct": true,
+ "concerns": [
+  {
+   "severity": "warning",
+   "description": "The whole disclaimer paragraph was rewrapped: every line break after the first line changed. The paragraph keeps six lines, its font, size, left edge and right edge; please read it once in full."
+  }
+ ]
+}

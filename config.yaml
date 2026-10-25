@@ -1,0 +1,53 @@
+# Document Update Tool configuration.
+# Relative paths are resolved against the folder that contains this file.
+
+store:
+  root: docs                      # docs/<doc_id>/original.pdf, versions/, pending/, manifest.json, audit.log
+
+matching:
+  min_score: 90                   # a match must score at least this (0-100)
+  ambiguity_margin: 5             # ... and beat the next best candidate by more than this
+
+editing:
+  min_font_scale: 0.90            # reduced_font never goes below this share of the original size
+  retries_per_method: 2           # corrected scripts per method after the first attempt
+  methods:                        # tried in this order; remove a method to disable it
+    - original_box
+    - horizontal_expansion
+    - reduced_font
+    - paragraph_reflow
+    - form_field_update
+
+checks:
+  render_dpi: 150
+  pixel_margin: 2                 # pixels allowed to change just outside the area's edge
+
+llm:
+  provider: bedrock               # bedrock | offline (plain-code stand-in) | replay (recorded responses)
+  region: null                    # null = use the AWS_REGION environment variable
+  # Model IDs per role.  "auto" picks the newest Claude Sonnet inference profile the key can use
+  # (listed on first run and cached in <store>/.model_cache.json).  You can also give an ID, e.g.
+  # global.anthropic.claude-sonnet-5-5 or us.anthropic.claude-sonnet-5-5.
+  vision_model: auto
+  planner_model: auto
+  coder_model: auto
+  auto_model_family: claude-sonnet-5-5
+  temperature: 0                  # sent for structured calls; models that only accept the default are retried without it
+  max_tokens: 8000
+  tool_choice: auto               # auto (works on every current model) | tool (forced; older models only)
+  max_calls_per_change: 12
+  max_cost_per_change_usd: 1.00
+  prices_per_million_tokens:      # used for the cost estimate only; set them to your Bedrock prices
+    default: {input: 2.00, output: 10.00}
+  timeout_seconds: 180
+  visual_check: true              # step 4
+  visual_review: true             # step 10 (adds warnings only)
+  replay_file: null               # for provider: replay
+  record_dir: null                # when set, every Bedrock response is also saved here (for offline tests)
+
+sandbox:
+  kind: local                     # local | container (container is a placeholder for later)
+  python: null                    # null = ~/.venvs/doc-update-sandbox/Scripts/python.exe (Windows) or bin/python
+  lib_dir: null                   # null = <sandbox venv>/pdf_ops_lib (pdf_ops is copied there automatically)
+  timeout_seconds: 60
+  memory_mb: 1536

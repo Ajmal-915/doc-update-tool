@@ -1,0 +1,18 @@
+{
+ "region_type": "paragraph",
+ "risks": [
+  {
+   "type": "other",
+   "description": "the phrase wraps from the end of the first line to the start of the second; the longer wording needs the paragraph rewrapped"
+  }
+ ],
+ "recommended_method": "paragraph_reflow",
+ "confidence": 0.7,
+ "notes": "Ragged-right disclaimer paragraph with empty space below it; rewrap within its left and right edges.",
+ "boundary_px": {
+  "x0": 154.2,
+  "y0": 276.0,
+  "x1": 1087.5,
+  "y1": 483.3
+ }
+}

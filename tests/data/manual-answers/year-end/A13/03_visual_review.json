@@ -1,0 +1,9 @@
+{
+ "looks_correct": true,
+ "concerns": [
+  {
+   "severity": "info",
+   "description": "Only the end of the last line changed; the full stop moved with the text."
+  }
+ ]
+}

@@ -1,0 +1,18 @@
+{
+ "region_type": "table_cell",
+ "risks": [
+  {
+   "type": "table_line",
+   "description": "two-line bold label in a fixed-height row; value column rule at x=321pt"
+  }
+ ],
+ "recommended_method": "manual_review",
+ "confidence": 0.75,
+ "notes": "The label spans two lines of the row. The shorter replacement would leave the second line empty or need the label rewrapped inside a fixed table row; a person should decide.",
+ "boundary_px": {
+  "x0": 108.8,
+  "y0": 1171.5,
+  "x1": 657.3,
+  "y1": 1229.2
+ }
+}

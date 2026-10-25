@@ -1,0 +1,9 @@
+{
+ "looks_correct": true,
+ "concerns": [
+  {
+   "severity": "info",
+   "description": "On top of v001, the longer label \"Other Operating Income, Net\" stays inside the label column; the amounts and neighbouring rows are unchanged."
+  }
+ ]
+}

@@ -1,0 +1,12 @@
+{
+ "chosen_method": "original_box",
+ "fallback_methods": [],
+ "parameters": {},
+ "rejected_methods": [
+  {
+   "method": "horizontal_expansion",
+   "reason": "not allowed by the layout check and not needed"
+  }
+ ],
+ "reason": "Marketing is shorter; the label simply ends earlier inside its cell."
+}
