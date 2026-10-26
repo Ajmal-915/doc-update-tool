@@ -6,7 +6,7 @@ target Windows machine; see "What was not run here" below.
 
 ## Test suite
 
-`python -m pytest` (offline, no Bedrock key): **all tests pass** — 200 passed,
+`python -m pytest` (offline, no Bedrock key): **all tests pass** — 206 passed,
 2 skipped (Windows Job Object test, generated cases not imported), 1 deselected (live).
 
 | File | Tests | What it covers |
@@ -319,6 +319,9 @@ checks:
 | Manual review where an edit was expected (safe; see below) | 195 |
 | **Edited although the oracle found damage, or where manual review was required** | **0** |
 | **Errors or crashes** | **0** |
+
+Rerun on 26 October 2026, after the alignment and justification changes, with the same requests: identical
+results (the same counts and the same methods), still 0 unsafe and 0 errors.
 
 Methods used: original box 1,080, horizontal expansion 279, reduced font 63,
 paragraph reflow 59, form field 3. All 81 two-version chains were approved, and
