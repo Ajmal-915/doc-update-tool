@@ -15,6 +15,7 @@ the glyphs the original document used).
 from __future__ import annotations
 
 import io
+import logging
 import re
 import unicodedata
 from decimal import Decimal
@@ -25,6 +26,9 @@ import pikepdf
 from .cmap import ToUnicodeCMap
 from .encodings import MAC_ROMAN, NAMED, STANDARD, glyph_to_unicode, unicode_to_glyph_names
 from .errors import MissingGlyphsError, UnsupportedError
+
+# fontTools warns about odd 'head' timestamps in old embedded fonts; they do not matter here
+logging.getLogger("fontTools").setLevel(logging.ERROR)
 
 try:  # pdfminer ships the Adobe AFM metrics of the standard 14 fonts.
     from pdfminer.fontmetrics import FONT_METRICS as _AFM
@@ -414,6 +418,13 @@ class PdfFont:
 
     def glyph_present(self, code: int) -> bool | None:
         """True / False when the embedded program can be inspected, None if unknown."""
+        try:
+            return self._glyph_present(code)
+        except Exception as exc:  # damaged tables (e.g. a CFF charset fontTools cannot read)
+            self.problems_program = f"glyph tables unreadable: {type(exc).__name__}: {exc}"
+            return None
+
+    def _glyph_present(self, code: int) -> bool | None:
         kind, prog, extra = self._program
         text = self.to_unicode(code) or ""
         if kind == "truetype":

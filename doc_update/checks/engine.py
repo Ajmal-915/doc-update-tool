@@ -85,8 +85,33 @@ def _in_any(ch: XChar, rects: list[Rect], tol: float = 0.0) -> bool:
     return any(r.contains_point(ch.cx, ch.oy + 0.3 * ch.size, tol) for r in rects)
 
 
-def _key_list(chars: list[XChar]) -> list[tuple]:
-    return sorted(c.key() for c in chars)
+POSITION_TOLERANCE = 0.005  # points; far below anything visible
+RECHECK_PIXELS = 400  # outside-area pixel changes up to this many are re-checked at a second resolution
+
+
+def _same_chars(before: list[XChar], after: list[XChar], tol: float = POSITION_TOLERANCE) -> bool:
+    """Same glyphs (text, font, size, render mode, colour) at the same positions, within ``tol``.
+
+    Rounded keys alone are not enough: a 0.0002 pt difference can straddle a rounding boundary.
+    """
+    def groups(chars):
+        out: dict = {}
+        for c in chars:
+            k = c.key()
+            out.setdefault((k[0],) + k[3:], []).append((c.oy, c.ox))
+        return out
+
+    gb, ga = groups(before), groups(after)
+    if gb.keys() != ga.keys():
+        return False
+    for k, pb in gb.items():
+        pa = ga[k]
+        if len(pa) != len(pb):
+            return False
+        for (yb, xb), (ya, xa) in zip(sorted(pb), sorted(pa)):
+            if abs(yb - ya) > tol or abs(xb - xa) > tol:
+                return False
+    return True
 
 
 def _diff_keys(before: list[XChar], after: list[XChar], limit: int = 12) -> dict:
@@ -144,6 +169,12 @@ def reading_text(chars: list[XChar]) -> tuple[str, list[int]]:
 
 def _norm(text: str) -> str:
     return " ".join(unicodedata.normalize("NFC", text).split())
+
+
+def _overlap_area(a: tuple, b: tuple) -> float:
+    w = min(a[2], b[2]) - max(a[0], b[0])
+    h = min(a[3], b[3]) - max(a[1], b[1])
+    return w * h if w > 0 and h > 0 else 0.0
 
 
 def _overlap(a: tuple, b: tuple, tol: float = 0.1) -> bool:
@@ -215,7 +246,7 @@ class _Run:
         for i in sorted(self.pages):
             if i == self.spec.page_index:
                 continue
-            if _key_list(self.ex_b.pages.get(i, [])) != _key_list(self.ex_a.pages.get(i, [])):
+            if not _same_chars(self.ex_b.pages.get(i, []), self.ex_a.pages.get(i, [])):
                 bad_text.append(i + 1)
             rb, ra = self.r_b[i], self.r_a[i]
             if rb.shape != ra.shape or not np.array_equal(rb, ra):
@@ -229,16 +260,16 @@ class _Run:
         areas = self.spec.areas
         before = [c for c in self.ex_b.pages.get(p, []) if not _in_any(c, areas)]
         after = [c for c in self.ex_a.pages.get(p, []) if not _in_any(c, areas)]
-        same = _key_list(before) == _key_list(after)
+        same = _same_chars(before, after)
         self.add("text_outside_area_identical", same,
                  "text outside the allowed area changed (words moved, spacing changed, lines lost or added)" if not same else "",
                  **({} if same else _diff_keys(before, after)))
 
-    def _mask(self, page: int, shape) -> np.ndarray:
+    def _mask(self, page: int, shape, frame=None) -> np.ndarray:
         """True where pixels are allowed to change."""
         mask = np.zeros(shape[:2], bool)
         m = self.spec.pixel_margin
-        frame = self.frames[page]
+        frame = frame or self.frames[page]
         for r in self.spec.areas:
             x0, y0, x1, y1 = frame.rect_to_px(r)
             mask[max(0, y0 - m):max(0, y1 + m), max(0, x0 - m):max(0, x1 + m)] = True
@@ -255,19 +286,35 @@ class _Run:
         outside = changed & ~mask
         n = int(outside.sum())
         details = {}
-        if n:
+        if 0 < n <= RECHECK_PIXELS and self._outside_clean_at(p, round(self.spec.dpi * 1.37)):
+            # a glyph that sits almost exactly on a pixel-rounding boundary can flip its anti-aliasing when
+            # the content stream around it is rewritten (positions equal to ~1e-5 pt); a real change shows
+            # at any resolution, a rounding flip does not
+            self.add("render_outside_area_identical", True, "", antialiasing_only_pixels=n,
+                     clean_at_dpi=round(self.spec.dpi * 1.37))
+            n = -1
+        if n > 0:
             ys, xs = np.nonzero(outside)
             frame = self.frames[p]
             details = {"changed_pixels": n, "pixel_box": [int(xs.min()), int(ys.min()), int(xs.max()), int(ys.max())],
                        "approx_points": [round(frame.crop.x0 + xs.min() / frame.scale, 1), round(frame.crop.y1 - ys.max() / frame.scale, 1),
                                          round(frame.crop.x0 + xs.max() / frame.scale, 1), round(frame.crop.y1 - ys.min() / frame.scale, 1)]}
-        self.add("render_outside_area_identical", n == 0,
-                 f"{n} pixels changed outside the allowed area" if n else "", **details)
+        if n >= 0:
+            self.add("render_outside_area_identical", n == 0,
+                     f"{n} pixels changed outside the allowed area" if n else "", **details)
         inside_changed = int((changed & mask).sum())
         if self.spec.replacement != self.spec.target_text:
             self.add("render_inside_area_changed", inside_changed > 0,
                      "nothing visible changed inside the area although the text should have changed" if not inside_changed else "",
                      changed_pixels=inside_changed)
+
+    def _outside_clean_at(self, p: int, dpi: int) -> bool:
+        rb = render_pages(self.before, dpi, [p])[p]
+        ra = render_pages(self.after, dpi, [p])[p]
+        if rb.shape != ra.shape:
+            return False
+        frame = page_frames(self.before, dpi)[p]
+        return not ((rb != ra).any(axis=2) & ~self._mask(p, rb.shape, frame)).any()
 
     def _graphics_images(self):
         diff_g = [i + 1 for i, (x, y) in enumerate(zip(self.snap_b.graphics_per_page, self.snap_a.graphics_per_page)) if x != y]
@@ -408,11 +455,17 @@ class _Run:
                  + ", ".join(f"{c.text!r} at x={c.x0:.1f}-{c.x1:.1f}" for c in outside_b[:5]) if outside_b else "")
         others = [c for c in self.ex_a.pages.get(p, []) if not _in_any(c, spec.areas) and not c.text.isspace()]
         inside = [c for c in after_inside if not c.text.isspace()]
+        before_cores = [c.core() for c in before_inside if not c.text.isspace()]
         hits = []
         for c in inside:
             cc = c.core()
             for o in others:
-                if _overlap(cc, o.core()):
+                oc = o.core()
+                if _overlap(cc, oc):
+                    # kerned pairs at the target's edge ("y." in italics) overlapped in the original too
+                    prior = max((_overlap_area(b, oc) for b in before_cores), default=0.0)
+                    if _overlap_area(cc, oc) <= prior * 1.05 + 0.01:
+                        continue
                     hits.append(f"{c.text!r} overlaps {o.text!r} at ({o.x0:.1f},{o.oy:.1f})")
                     break
         for i, c in enumerate(inside):
@@ -436,6 +489,8 @@ class _Run:
                     continue  # the same background the original text sat on
                 if touched_before and kind in ("line", "rect") and rect.contains(box, tol=0.1):
                     continue
+                if touched_before and kind == "line" and min(rect.width, rect.height) <= 2.5:
+                    continue  # a rule the original text already sat on or crossed (forms, underlines)
                 hits.append(f"{c.text!r} touches a {kind} at {rect.as_list(1)}")
                 break
         for rect in image_rects(self.snap_a, p):

@@ -21,6 +21,7 @@ from pdfminer.pdfinterp import PDFPageInterpreter, PDFResourceManager
 from pdfminer.pdfpage import PDFPage
 from pdfminer.pdfparser import PDFParser
 from pdfminer.pdftypes import resolve1
+from pdfminer.utils import translate_matrix
 
 logging.getLogger("pdfminer").setLevel(logging.ERROR)
 
@@ -93,6 +94,25 @@ class _Device(PDFLayoutAnalyzer):
         self._render = textstate.render
         return super().render_string(textstate, seq, ncs, graphicstate)
 
+    def render_string_horizontal(self, seq, matrix, pos, font, fontsize, scaling, charspace, wordspace, rise,
+                                 dxscale, ncs, graphicstate):
+        # The PDF spec adds the character spacing (Tc) after every glyph.  pdfminer adds it before every
+        # glyph but the first of each string array, i.e. it drops the Tc after the array's last glyph, so
+        # text after a TJ boundary lands Tc too far left.  An edit that has to split a TJ (a font-size
+        # change) would then look like it moved the following text.
+        x, y = pos
+        for obj in seq:
+            if isinstance(obj, (int, float)):
+                x -= obj * dxscale
+            elif isinstance(obj, bytes):
+                for cid in font.decode(obj):
+                    x += self.render_char(translate_matrix(matrix, (x, y)), font, fontsize, scaling, rise, cid,
+                                          ncs, graphicstate)
+                    x += charspace
+                    if cid == 32 and wordspace:
+                        x += wordspace
+        return x, y
+
     def render_char(self, matrix, font, fontsize, scaling, rise, cid, ncs, graphicstate):
         adv = super().render_char(matrix, font, fontsize, scaling, rise, cid, ncs, graphicstate)
         item = self.cur_item._objs[-1]
@@ -130,7 +150,13 @@ def extract(path: str | Path, only: set | None = None) -> Extraction:
                 continue
             dev = _Device(rm, i)
             interp = PDFPageInterpreter(rm, dev)
-            interp.process_page(page)
+            # raw PDF user space, like pdf_ops and the check areas: pdfminer's own process_page moves the
+            # media box corner to (0, 0) and applies /Rotate, which shifts everything on pages whose media
+            # box does not start at the origin (many government forms)
+            ctm = (1, 0, 0, 1, 0, 0)
+            dev.begin_page(page, ctm)
+            interp.render_contents(page.resources, page.contents, ctm=ctm)
+            dev.end_page(page)
             pages[i] = dev.chars
             fonts.update(dev.fonts)
         # resolve font specs while the file is open (streams are read lazily)

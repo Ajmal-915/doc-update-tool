@@ -15,8 +15,10 @@ from __future__ import annotations
 
 from decimal import Decimal
 
+import pikepdf
+
 from . import geometry as G
-from .content import Glyph
+from .content import FLOW_BREAK_OPS, SHOW_OPS, Glyph
 from .document import Document
 from .edit import BlockInsert, BlockLine, EditPlan, apply_plan
 from .errors import DoesNotFitError
@@ -178,10 +180,11 @@ def reflow_paragraph(doc: Document, target: Target, replacement: str, boundary: 
             x = right - natural
         tx, ty = G.apply(inv, x, bases[i])
         block_lines.append(BlockLine(tx, ty, font.encode(text), word_kern, text))
+    point = _reading_order_point(doc.model(target.page_index), affected, g0, bt)
     block = BlockInsert(
-        after=(g0.stream, bt.et_index), font=font, font_res=g0.font_res, size=g0.size, tm_linear=(a, b, c, d),
-        lines=block_lines, tc=g0.tc, th=g0.th, ts=g0.ts, tr=g0.tr, fill_ops=g0.fill_ops,
-        space_advance=_space_advance(doc, target), ctm=g0.ctm,
+        after=(g0.stream, point[0] if point else bt.et_index), font=font, font_res=g0.font_res, size=g0.size,
+        tm_linear=(a, b, c, d), lines=block_lines, tc=g0.tc, th=g0.th, ts=g0.ts, tr=g0.tr, fill_ops=g0.fill_ops,
+        space_advance=_space_advance(doc, target), ctm=g0.ctm, restore_ops=point[1] if point else None,
     )
     plan = EditPlan(target.page_index, remove={gid for ln in affected for gid in ln.glyphs}, blocks=[block])
     target_dict = target.to_dict()
@@ -189,3 +192,70 @@ def reflow_paragraph(doc: Document, target: Target, replacement: str, boundary: 
     bbox = result.bbox(font)
     return MethodResult("paragraph_reflow", target_dict, clean_replacement(replacement), fit.to_dict(), result.to_dict(),
                         bbox.as_list() if bbox else None, font.base_font, float(g0.size), float(g0.size))
+
+
+def _reading_order_point(model, affected, g0, bt):
+    """Where the new lines keep the reading order: right after the show instruction that drew the
+    paragraph's last original glyph, as (instruction index, positioning instructions that rebuild the
+    text line matrix there after the text object is reopened).
+
+    Producers often put a whole column or page in one text object; drawing the new lines after its ET
+    would move the paragraph's tail behind the rest of the column for copy/paste, search and screen
+    readers.  Returns None (draw after the ET) when splitting the text object there is not clean: the
+    next text is not explicitly positioned, the CTM differs, or a marked-content sequence started inside
+    the text object would be cut in two.
+    """
+    removed = [model.glyphs[g] for ln in affected for g in ln.glyphs]
+    last = max(removed, key=lambda g: g.op_index)
+    if last.stream != g0.stream or last.ctm != g0.ctm:
+        return None
+    info = model.streams[g0.stream]
+    instrs = info.instructions
+
+    def op_of(i):
+        ins = instrs[i]
+        return None if isinstance(ins, pikepdf.ContentStreamInlineImage) else str(ins.operator)
+
+    end = last.op_index
+    j = end + 1
+    while j < len(instrs):  # other show ops in the same flow (the rest of that line) stay before the block
+        op = op_of(j)
+        if op in SHOW_OPS:
+            end = j
+        elif op in FLOW_BREAK_OPS or op == "ET":
+            break
+        j += 1
+    depth = 0
+    for i in range(bt.bt_index + 1, end + 1):
+        op = op_of(i)
+        depth += 1 if op in ("BDC", "BMC") else -1 if op == "EMC" else 0
+    split = end
+    i = end + 1
+    while depth > 0 and i < len(instrs) and op_of(i) == "EMC":  # close the paragraph's marked content first
+        depth -= 1
+        split = i
+        i += 1
+    if depth != 0:
+        return None
+    for k in range(split + 1, len(instrs)):
+        op = op_of(k)
+        if op == "ET":
+            return None  # already the end of the text object: drawing after it keeps the order
+        if op in FLOW_BREAK_OPS:
+            break
+        if op in SHOW_OPS or op is None:
+            return None
+    else:
+        return None
+    # replay the original positioning since BT (not a computed Tm): viewers accumulate Td chains in their
+    # own float precision, and only the same operations in the same order give exactly the same positions
+    replay = []
+    for i in range(bt.bt_index + 1, split + 1):
+        op = op_of(i)
+        if op in ("Td", "TD", "Tm", "T*", "TL"):
+            replay.append(instrs[i])
+        elif op == "'":
+            replay.append(pikepdf.ContentStreamInstruction([], pikepdf.Operator("T*")))
+        elif op == '"':
+            return None  # also sets Tw and Tc; not worth replaying
+    return split, replay

@@ -6,19 +6,20 @@ target Windows machine; see "What was not run here" below.
 
 ## Test suite
 
-`python -m pytest` (offline, no Bedrock key): **all tests pass** — 171 passed,
+`python -m pytest` (offline, no Bedrock key): **all tests pass** — 186 passed,
 2 skipped (Windows Job Object test, generated cases not imported), 1 deselected (live).
 
 | File | Tests | What it covers |
 |---|---|---|
-| `tests/test_checks.py` | 40 | Step 8 gate. Correct edits pass for every font/operator style (WinAnsi, MacRoman, custom Differences, Type0 Identity-H, non-embedded Helvetica, "1 Tf" + text-matrix size, TJ kerning, Td/TD/T*/'/", multiple content streams). Deliberately broken edits are **all rejected**: neighbouring words shifted, space lost, spaces squeezed out of the replacement, line deleted, white box over the old text, text running into the next column, reflow running into the next paragraph, another form field changed, edit leaking onto a second page that shares the content stream, new font object, font below the minimum scale, glyphs missing from the subset, old text hidden with an invisible render mode, annotation removed, added document JavaScript, added page action, and an unchanged copy. |
+| `tests/test_checks.py` | 43 | Step 8 gate. Correct edits pass for every font/operator style (WinAnsi, MacRoman, custom Differences, Type0 Identity-H, non-embedded Helvetica, "1 Tf" + text-matrix size, TJ kerning, Td/TD/T*/'/", multiple content streams). Deliberately broken edits are **all rejected**: neighbouring words shifted, space lost, spaces squeezed out of the replacement, line deleted, white box over the old text, text running into the next column, reflow running into the next paragraph, another form field changed, edit leaking onto a second page that shares the content stream, new font object, font below the minimum scale, glyphs missing from the subset, old text hidden with an invisible render mode, annotation removed, added document JavaScript, added page action, and an unchanged copy. |
 | `tests/test_pdf_ops.py` | 28 | Fonts (encodings, widths, real subset coverage, AFM metrics), interpreter (all positioning operators, kerning, text-matrix size, form XObject matrix), edit engine (following text stays in place, same font resource, shared content stream copied, XObject drawn twice copied and renamed, other page keeps the original), methods a–e, reflow (free space, justified, mixed fonts refused). |
 | `tests/test_sandbox.py` | 34 | Static rejection of imports, exec/eval/compile/__import__/getattr, dunder access, absolute and parent paths, computed file names, `pikepdf.Job`, classes; empty environment (proved at runtime); audit hook blocks reads/writes outside the folder, subprocess, sockets, `os.system`, file deletion; timeout; memory limit; errors reported. |
 | `tests/test_pipeline_e2e.py` | 24 | Whole pipeline offline with **recorded Bedrock Converse responses**: in-place change, white-box script rejected then corrected, crashing script retried, planner's wrong order overridden, all attempts failing → manual review, form field, cautious layout advice disabling expansion, LLM call budget, missing key; PDF text is passed only inside the untrusted `<document_data>` block; manual-review reasons (not found, ambiguous, signed, scanned, missing glyphs, not enough space, graphic text, no change). |
 | `tests/test_llm.py` | 14 | Converse logic without network: temperature refused → retried without it, missing tool call → one reminder, schema validation, throttling retry, secrets scrubbed from errors, budget, audit fields, prompt hash, key/region required, bearer token preferred by botocore, model auto-selection. |
-| `tests/test_store.py` | 8 | Read-only original with SHA-256, v001/v002 chain, reject deletes the candidate, stale candidate refused, tampered candidate/original refused, manual review recorded without PDF, CLI round trip and exit codes. |
-| `tests/test_matching.py` | 10 | Normalisation, exact/approximate/cross-line matches, ambiguity with positions, neighbouring page, form-field values. |
+| `tests/test_store.py` | 9 | Read-only original with SHA-256, v001/v002 chain, reject deletes the candidate, stale candidate refused, tampered candidate/original refused, manual review recorded without PDF, CLI round trip and exit codes. |
+| `tests/test_matching.py` | 13 | Normalisation, exact/approximate/cross-line matches, ambiguity with positions, neighbouring page, form-field values; a missing number, word, accent or end mark is not a match; a close match does not beat the exact text on the next page. |
 | `tests/test_analysis.py` | 9 | Words/chars, effective size from the text matrix, encodings, signed/scanned/shared detection, fields, measurements (table cell, two columns, TOC dot leaders, free space, missing glyphs). |
+| `tests/test_real_world_layouts.py` | 8 | Layouts found in the corpus test: one text object per column (reflow keeps the reading order), an instruction split across content streams, individually positioned glyphs, Tc with a size change, a line longer than its column, a media box not at the origin, a rotated page, columns aligned with runs of spaces. |
 | `tests/test_scenarios.py` | 6 | Scenario loader (several layouts), synthetic pack end to end, year-end pack with the offline stand-in and with the hand-written LLM answers (all 28 PASS); generated cases (skipped here — not available). |
 
 A 60-page PDF goes through the whole offline pipeline in about 2.5 s: the checks
@@ -125,6 +126,91 @@ D01 and D02 are always expected to go to manual review. The loader accepts
 several layouts of `scenarios.json`; if it cannot map a scenario it reports the
 keys it found instead of guessing.
 
+### Real-world corpus: 116 PDFs, 2,992 generated change requests (offline provider)
+
+116 real PDFs were downloaded from public GitHub repositories (ordinary websites are
+blocked in the build environment). Only PDF files were taken, and none came from a
+PDF-editing project:
+
+- 40 research papers (papers-we-love: LaTeX, Word, OpenOffice, Distiller, Quartz,
+  Ghostscript, old scans).
+- Government reports, tables, forms and malformed or encrypted test files from the
+  test data of the text-extraction libraries pdfplumber (30), pdfminer.six (26) and
+  camelot (18).
+- 2 copies of blank forms (the IRS 1040-NR and an AcroForm sample), filled with
+  values whose appearance streams were generated by qpdf.
+
+The PDFs are not included here. `scripts/corpus_test.py` (see README) generates
+about 25 change requests per document from pdfium's text layer, not from the
+tool's own text reading:
+- same-letter and same-digit swaps, and reversed phrases and lines (an edit is
+  expected);
+- shorter, longer and much longer wording, two-line targets, fuzzy find text, the
+  wrong page number, "% signs", and form-field values (either result is
+  acceptable);
+- characters missing from the font, text that is not there, ambiguous words, and
+  empty or unchanged replacements (manual review is required).
+
+Every request went through the public API (ingest, update; for 81 documents also
+approve, a second edit on v001, and approve again) with the offline LLM stand-in.
+Every edit was then checked by an oracle that shares no code with the tool's
+checks:
+- the pdfium text of each changed page equals the original with exactly the
+  requested substitution;
+- rendered pixels change only in the target's line band (or the paragraph, or the
+  form widget);
+- no other page changes, no new fonts appear, and qpdf reports no new problems;
+- the input file is untouched.
+
+| Result | Requests |
+|---|---|
+| Edited, and the independent oracle confirmed the edit | 1,484 |
+| Manual review (or input rejected) where that is required or acceptable | 1,305 |
+| Manual review where an edit was expected (safe; see below) | 195 |
+| **Edited although the oracle found damage, or where manual review was required** | **0** |
+| **Errors or crashes** | **0** |
+
+Methods used: original box 1,080, horizontal expansion 279, reduced font 63,
+paragraph reflow 59, form field 3. All 81 two-version chains were approved, and
+the second approval succeeded on all 71 documents where the second edit was
+possible. Every request that had to go to manual review did: all 146 missing
+characters, 158 texts that are not there, 141 ambiguous words, 146 empty and 146
+unchanged replacements, and every edit on the 4 encrypted, 8 unreadable and the
+digitally signed PDFs. A request takes 1.9 s at the median and 6.3 s at the 95th
+percentile.
+
+Of the 1,057 requests where an edit was clearly possible (letter, digit, phrase
+and line swaps), 846 were made and 16 were on the signed PDF. The other 195 went to
+manual review, broken down as:
+- **text not found (101):** pdfium's reading order differs from the tool's line
+  layout, e.g. table rows, rotated pages, or Type 3 bitmap fonts;
+- **graphic text (34):** chart labels and similar;
+- **failed checks (30):** mostly where the new text would touch neighbouring text
+  or a rule;
+- **mixed fonts (17), missing glyphs (5), ambiguous (4) and unsupported (4).**
+
+Each of these has a reason a reviewer can act on.
+
+The full report, which lists every refused request with its reason, is in
+`tests/data/corpus-report.md`.
+
+The corpus test found these problems, all now fixed (each has a regression test):
+
+| Problem | Effect before the fix |
+|---|---|
+| Fuzzy matching accepted a match missing a word, a number, an accent or a trailing mark ("…Regressions" for "…Regressions 93", "31 December 2024" for "…2023", "Center" for "Centers", "Königsberg" for "Konigsberg") | **Wrong edits**: the leftover part stayed or was duplicated, or the wrong year or word was changed. Now only spacing, punctuation, case and small typos inside the text may differ |
+| When the requested page's layout could not be read, or only had an approximate match, the search fell back to a neighbouring page | **Edits on the wrong page**. Now: manual review explaining why |
+| Columns aligned with runs of spaces (plain-text reports) were read as one line | **A table row reflowed into running text**. Now each column is a separate cell |
+| Reflowed lines were written after the end of the whole text object | Copy/paste, search and screen readers read the paragraph's tail after the rest of the column. Now the lines are placed right after the paragraph |
+| Bookmarks, links and /OpenAction pointing at the edited page counted as document changes | Every edit on such pages was refused |
+| The checker's text positions were relative to the media box corner, not PDF coordinates | Every edit on pages whose media box does not start at (0, 0) (e.g. IRS forms) was refused |
+| An instruction split across two content streams (Distiller) | Text lost from the model; the page crashed or edits were refused |
+| A CFF font with an unreadable charset; a `TJ` without operands | Internal error on the whole document |
+| Password-protected or broken PDFs | `ingest_document` raised an exception instead of returning an error, and left a half-made document in the store |
+| Justified or individually positioned glyphs (OpenOffice, Distiller kerning) | Same-letter swaps fell back to other methods or were refused. Method a now reproduces the original's letter and word spacing |
+| The checker's pdfminer drops character spacing (Tc) after each `TJ`, and compared positions rounded to 0.01 pt; anti-aliasing flips on one glyph; overlaps that already existed (italic "y.", text on form rules) | Correct edits were refused. Now: spec-correct Tc, a 0.005 pt tolerance, a re-check at a second resolution, and comparison with the original |
+| Horizontal boundary measured left of where the line already ended | Edits in justified lines were refused |
+
 ### Synthetic year-end-style pack (offline provider)
 
 `tests/data/synthetic-pack` (built by `tests/make_synthetic_pack.py`) has the
@@ -208,19 +294,34 @@ Verdicts: PASS 20
 * Paragraph reflow (method d) requires one font, size and colour throughout the
   reflowed lines, never hyphenates, and refuses paragraphs with words hyphenated
   across lines. New lines are drawn in a new text block placed right after the
-  paragraph's original block; in tagged PDFs they are not linked to the
-  structure tree, and `/ActualText` spans are not updated.
+  paragraph's last original line, so the reading order is kept. If the text
+  object cannot be split cleanly there, the block goes after the text object
+  instead. In tagged PDFs the new lines are not linked to the structure tree, and
+  `/ActualText` spans are not updated. Rewrapped lines use single spaces between
+  words, so double spaces after full stops in the original are not kept.
 * Form fields: text fields with an existing appearance stream, in the field's own
   font. In multi-line fields only changes that stay on one line of the appearance
   are made (the rest of that line moves; line breaks are not changed). Comb,
   password, rich-text and choice fields go to manual review.
 * Layout analysis (lines, paragraphs, columns, table cells) is heuristic. When it
-  is wrong the checks reject the damage, so the result is manual review rather
-  than a bad edit, but a workable change may be missed.
+  is wrong the checks usually reject the damage, so the result is manual review
+  rather than a bad edit, but a workable change may be missed. The corpus test
+  showed one kind of damage the checks cannot see: a change of *layout* inside the
+  allowed area (a table row rewrapped as running text). Space-aligned columns are
+  now treated as cells, but with the offline stand-in no vision check confirms the
+  region type; use the Bedrock vision check in production.
+* Matching is strict about content. Numbers, whole words, accents and separate
+  marks at either end must match the PDF exactly; only spacing, punctuation, case
+  and small typos inside the text may differ. A request that names the wrong page
+  is matched on a neighbouring page only when the requested page does not contain
+  the text at all.
+* Pages whose glyph advance widths do not match the glyph positions (seen in some
+  iText output) cannot be laid out reliably; text on them goes to manual review.
 * The independent glyph check covers embedded TrueType, CFF, OpenType and Type 1
-  programs; the test fixtures only contain TrueType fonts (Liberation Sans), so CFF
-  and Type 1 paths are less exercised. Characters pdfminer cannot decode
-  (no ToUnicode) inside the change area fail the check.
+  programs. The unit-test fixtures only contain TrueType fonts; CFF and Type 1 were
+  exercised by the corpus test (LaTeX, Distiller and Ghostscript papers).
+  Characters pdfminer cannot decode (no ToUnicode) inside the change area fail
+  the check.
 * Pixel identity is measured with the bundled pdfium; other viewers may
   anti-alias differently, but the before/after comparison always uses one renderer.
 * The local sandbox is a safety layer for internal use, **not a hard security

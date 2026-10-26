@@ -121,6 +121,8 @@ def measure(doc: pdf_ops.Document, target: Target, replacement: str, sample_page
     block_lines = [layout.lines[i] for i in block.lines]
     target_lines = [layout.lines[part.line] for part in target.parts]
     part_end = max(part.x1 for part in target.parts)
+    # the line already reaches here (text after the target included): the boundary is never left of it
+    line_end = max([part_end] + [part.line_x1 for part in target.parts if part.has_text_after])
 
     # column right edge from neighbouring lines (same left edge) and table rules
     sources = []
@@ -264,7 +266,7 @@ def measure(doc: pdf_ops.Document, target: Target, replacement: str, sample_page
                    "leading": round(block.leading, 3), "first_line_indent": round(block.first_indent, 2),
                    "target_line_numbers": [block.lines.index(part.line) + 1 for part in target.parts if part.line in block.lines]},
         column_right_edge=column_edge, column_sources=sources, right_obstacle=right_obstacle, below_obstacle=below,
-        free_space_below=free, extra_lines_possible=extra_lines, boundary=max(boundary, part_end), region_type=region,
+        free_space_below=free, extra_lines_possible=extra_lines, boundary=max(boundary, line_end), region_type=region,
         risks=risks, missing_chars=missing,
         font={"name": first.font.base_font, "resource": first.font_res, **first.font.describe(),
               "size": float(first.size), "effective_size": round(size, 3)},

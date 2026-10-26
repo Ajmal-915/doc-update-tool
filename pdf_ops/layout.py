@@ -120,6 +120,22 @@ def _rule_between(rules: list[Rect], x_left: float, x_right: float, y: float, si
     return False
 
 
+COLUMN_SPACES = 3  # a run of at least this many space glyphs wider than LINE_GAP_EM separates columns
+
+
+def _gap_reference(run: list[Glyph], default: Glyph) -> Glyph:
+    """The glyph a following gap is measured from.
+
+    Reports and plain-text exports align their columns with runs of spaces; measured from the last
+    visible glyph, such a run is a column gap.  One or two spaces (a sentence gap, or wide justified
+    spaces) are measured from the last space as before.
+    """
+    k = len(run)
+    while k and run[k - 1].text.isspace():
+        k -= 1
+    return run[k - 1] if k and len(run) - k >= COLUMN_SPACES else default
+
+
 def build_layout(model: PageModel) -> PageLayout:
     glyphs = [g for g in model.glyphs if g.upright and g.visible]
     vrules = _vertical_rules(model)
@@ -130,10 +146,13 @@ def build_layout(model: PageModel) -> PageLayout:
     cur: list[Glyph] = []
     for g in glyphs:
         if cur:
-            last = cur[-1]
+            last = _gap_reference(cur, cur[-1])
             size = max(float(last.effective_size), 1e-3)
-            same_base = abs(g.y - last.y) <= 0.25 * size
+            same_base = abs(g.y - cur[-1].y) <= 0.25 * size
             gap = g.x - last.x_end
+            if g.text.isspace() and same_base and -0.5 * size <= g.x - cur[-1].x_end <= LINE_GAP_EM * size:
+                cur.append(g)  # a run of spaces stays with the text before it; what follows is decided at the next glyph
+                continue
             if same_base and -0.5 * size <= gap <= LINE_GAP_EM * size and not _rule_between(vrules, last.x_end, g.x, g.y, size):
                 cur.append(g)
                 continue
@@ -147,7 +166,8 @@ def build_layout(model: PageModel) -> PageLayout:
     merged: list[list[Glyph]] = []
     for fr in fragments:
         for m in merged:
-            last = max(m, key=lambda g: g.x_end)
+            by_x = sorted(m, key=lambda g: g.x)
+            last = _gap_reference(by_x, max(m, key=lambda g: g.x_end))
             first = min(m, key=lambda g: g.x)
             size = max(float(last.effective_size), 1e-3)
             if abs(fr[0].y - last.y) > 0.25 * size:

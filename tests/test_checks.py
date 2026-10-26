@@ -194,3 +194,58 @@ def test_rejects_added_page_action(pdfs, work):
     report = run_checks(pdfs["report"], out, spec)
     assert not report.passed
     assert "page_attributes_unchanged" in _failed(report)
+
+
+# ------------------------------------------------------------------ links to the edited page
+def _with_links_to_page_1(src, dst):
+    """Same PDF plus /OpenAction, an outline entry and a link annotation, all pointing at page 1."""
+    import pikepdf
+
+    with pikepdf.open(src) as pdf:
+        p1 = pdf.pages[0].obj
+        pdf.Root.OpenAction = pikepdf.Array([p1, pikepdf.Name.Fit])
+        item = pdf.make_indirect(pikepdf.Dictionary(Title=pikepdf.String("Start"),
+                                                    Dest=pikepdf.Array([p1, pikepdf.Name.XYZ, 0, 800, 0])))
+        outlines = pdf.make_indirect(pikepdf.Dictionary(Type=pikepdf.Name.Outlines, First=item, Last=item, Count=1))
+        item.Parent = outlines
+        pdf.Root.Outlines = outlines
+        link = pdf.make_indirect(pikepdf.Dictionary(Type=pikepdf.Name.Annot, Subtype=pikepdf.Name.Link,
+                                                    Rect=[20, 20, 60, 30], Border=[0, 0, 0],
+                                                    Dest=pikepdf.Array([p1, pikepdf.Name.Fit])))
+        pdf.pages[0].obj.Annots = pdf.make_indirect(pikepdf.Array([link]))
+        pdf.save(dst)
+    return dst
+
+
+def test_edit_on_a_page_that_bookmarks_and_links_point_to_passes(pdfs, work):
+    # real PDFs (e.g. the Bitcoin paper) open at page 1 and have outlines/links to pages; editing that
+    # page's text is not a change to the actions that point at it
+    src = _with_links_to_page_1(pdfs["report"], work / "links.pdf")
+    out, spec, _ = ek.good_edit(src, work / "out.pdf", "a", "31 December 2023", "31 December 2024")
+    report = run_checks(src, out, spec)
+    assert report.passed, report.summary()
+
+
+def test_retargeted_bookmark_is_rejected(pdfs, work):
+    import pikepdf
+
+    src = _with_links_to_page_1(pdfs["report"], work / "links.pdf")
+    out, spec, _ = ek.good_edit(src, work / "out.pdf", "a", "31 December 2023", "31 December 2024")
+    with pikepdf.open(out, allow_overwriting_input=True) as pdf:
+        pdf.Root.Outlines.First.Dest = pikepdf.Array([pdf.pages[0].obj, pikepdf.Name.XYZ, 0, 400, 0])
+        pdf.save(out)
+    report = run_checks(src, out, spec)
+    assert "document_level_unchanged" in _failed(report)
+
+
+def test_small_real_change_outside_the_area_is_still_caught(pdfs, work):
+    # small pixel differences are re-checked at a second resolution (anti-aliasing flips); a real mark is not
+    import pikepdf
+
+    out, spec, _ = ek.good_edit(pdfs["report"], work / "out.pdf", "a", "31 December 2023", "31 December 2024")
+    with pikepdf.open(out, allow_overwriting_input=True) as pdf:
+        page = pdf.pages[0]
+        page.contents_add(pdf.make_stream(b"q 0 g 300 300 1.5 1.5 re f Q"), prepend=False)
+        pdf.save(out)
+    report = run_checks(pdfs["report"], out, spec)
+    assert "render_outside_area_identical" in _failed(report)

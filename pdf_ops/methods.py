@@ -21,6 +21,10 @@ from .fonts import PdfFont, advance_of_codes
 from .target import Target
 
 GAP_TOLERANCE_SPACES = 0.6  # a shorter replacement may leave at most this much extra gap (in spaces)
+# method a may spread a small shortfall over the replacement instead (as justification does), up to:
+JUSTIFY_MAX_PER_SPACE = 0.75  # extra width per space, in spaces
+JUSTIFY_MAX_PER_GLYPH = 0.04  # extra width between the glyphs of a single word, in ems
+LETTER_SPACING_MAX = 0.12  # letter spacing copied from the original (method a), at most this many ems
 
 
 @dataclass
@@ -34,6 +38,8 @@ class PartFit:
     x0: float
     shift_after: float = 0.0
     after: list = field(default_factory=list)
+    word_kern: float = 0.0  # extra text-space advance after each space (fills a justified box exactly)
+    char_kern: float = 0.0  # extra text-space advance between letters (the original's letter spacing)
 
 
 @dataclass
@@ -247,15 +253,42 @@ def fit_in_place(doc: Document, target: Target, replacement: str) -> Fit:
     return _fit_fixed_box(doc, target, text, first, font, Decimal(1), "original_box")
 
 
+def _letter_pairs(s: str) -> int:
+    return sum(1 for a, b in zip(s, s[1:]) if a != " " and b != " ")
+
+
+def _letter_spacing(doc: Document, target: Target, em: float) -> float:
+    """Average extra gap (points) between the target's letters as the original was set.
+
+    Some producers position every glyph (OpenOffice, Distiller's TJ kerning, letter-spaced headings);
+    the same letters at natural spacing then come out wider or narrower than the original box.
+    """
+    model = doc.model(target.page_index)
+    gaps = []
+    for p in target.parts:
+        gl = [model.glyphs[g] for g in p.glyphs]
+        gaps += [b.x - a.x_end for a, b in zip(gl, gl[1:]) if not a.text.isspace() and not b.text.isspace()]
+    # a larger gap is between words drawn without a space glyph, not letter spacing
+    gaps = [g for g in gaps if abs(g) <= LETTER_SPACING_MAX * em]
+    if len(gaps) < 2:
+        return 0.0
+    mean = sum(gaps) / len(gaps)
+    return mean if abs(mean) > 0.002 else 0.0
+
+
 def _fit_fixed_box(doc, target, text, first, font, scale: Decimal, method: str) -> Fit:
     size = first.size * scale
     space_adv = _space_advance(doc, target)
     geo = _part_geometry(doc, target)
     space_pts = _space_width_points(doc, target) * float(scale)
     words = text.split(" ")
+    unit = first.x_scale * float(first.th)  # points per text-space unit
+    em = float(size) * first.x_scale
+    # method a reproduces the original's letter spacing; a smaller size (method c) keeps natural spacing
+    letter = _letter_spacing(doc, target, em) if method == "original_box" else 0.0
 
     def widths_of(s: str) -> float:
-        return _width_points(first, font, font.encode(s), size, space_adv * scale)
+        return _width_points(first, font, font.encode(s), size, space_adv * scale) + letter * _letter_pairs(s)
 
     limits, prefer = [], []
     for p, x0, x1, after in geo:
@@ -274,11 +307,22 @@ def _fit_fixed_box(doc, target, text, first, font, scale: Decimal, method: str) 
         w = widths_of(t)
         pf = PartFit(p.line, t, codes, w / float(scale), w, x1 - x0, x0, 0.0, [a.gid for a in after])
         visible_after = [a for a in after if not a.text.isspace()]
-        if visible_after and (x1 - x0) - w > GAP_TOLERANCE_SPACES * space_pts + 0.01:
-            return Fit(method, False,
-                       f"replacement is {(x1 - x0) - w:.1f} pt shorter than the original and text follows on the line; "
-                       "the word spacing would be wrong",
-                       font_size=float(first.size), new_font_size=float(size), scale=float(scale))
+        slack = (x1 - x0) - w
+        pf.char_kern = letter / unit
+        if visible_after and slack > GAP_TOLERANCE_SPACES * space_pts + 0.01:
+            # the original was spaced out (justified text): spread the shortfall over the replacement's spaces
+            # (or, for one word, its letters) as justification does, so the text after it keeps its exact gap
+            n_spaces, pairs = t.count(" "), _letter_pairs(t)
+            if method == "original_box" and n_spaces and slack / n_spaces <= JUSTIFY_MAX_PER_SPACE * space_pts:
+                pf.word_kern = slack / n_spaces / unit
+            elif method == "original_box" and not n_spaces and pairs and slack / pairs <= JUSTIFY_MAX_PER_GLYPH * em:
+                pf.char_kern += slack / pairs / unit
+            else:
+                return Fit(method, False,
+                           f"replacement is {slack:.1f} pt shorter than the original and text follows on the line; "
+                           "the word spacing would be wrong",
+                           font_size=float(first.size), new_font_size=float(size), scale=float(scale))
+            pf.width = x1 - x0
         parts.append(pf)
     return Fit(method, True, "fits", parts, float(scale), float(first.size), float(size))
 
@@ -363,7 +407,8 @@ def _apply_fit(doc: Document, target: Target, fit: Fit, replacement: str) -> Met
     model = doc.model(target.page_index)
     for tp, pf in zip(target.parts, fit.parts):
         anchor = tp.glyphs[0]
-        plan.inserts.append(Insertion(anchor, pf.codes, size, space_adv, pf.text))
+        plan.inserts.append(Insertion(anchor, pf.codes, size, space_adv, pf.text,
+                                      Decimal(str(round(pf.word_kern, 6))), Decimal(str(round(pf.char_kern, 6)))))
         if pf.shift_after:
             for gid in pf.after:
                 plan.shift[gid] = pf.shift_after

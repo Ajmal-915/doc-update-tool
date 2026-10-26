@@ -82,3 +82,39 @@ def test_page_out_of_range(pdfs):
     m = matching.find_target_text(doc, "anything", 9)
     assert m.status == "not_found"
     assert "does not exist" in m.reason
+
+
+def test_fuzzy_match_must_not_drop_a_number(pdfs):
+    # found in the corpus test: a TOC line matched without its page number, so the edit left the old number
+    # behind; a different year must not match either (a stale request would edit the wrong date)
+    doc = pdf_ops.open(pdfs["report"])
+    m = matching.find_target_text(doc, "for the financial year ending 31 December 2023 99", 1)
+    assert m.status == "not_found" and "numbers differ" in m.reason
+    m = matching.find_target_text(doc, "for the financial year ending 31 December 2022", 1)
+    assert m.status == "not_found" and "numbers differ" in m.reason
+
+
+def test_fuzzy_match_must_not_drop_a_word(pdfs):
+    doc = pdf_ops.open(pdfs["report"])
+    m = matching.find_target_text(doc, "Customer complaints are logged within two working days and quickly resolved", 1)
+    assert m.status == "not_found", m.reason
+    assert matching.coverage_problem("organisation", "organi- sation") is None  # hyphenation is fine
+    assert matching.coverage_problem("customer complaints", "customer complants") is None  # so is a small typo
+
+
+def test_close_match_on_the_page_loses_to_exact_text_next_door(tmp_path):
+    # corpus test: "Centers" requested on page 1; page 1 only has "Center", page 2 has "Centers"
+    from pdfgen import Builder, single_line
+    from samples import _all_text
+
+    b = Builder()
+    f1 = b.font_truetype("F1", _all_text() + "CPRDS")
+    b.page(single_line(f1, "SPS Distribution Center Paso Robles", 72, 700, 11) + b"\n"
+           + single_line(f1, "Customer complants are logged", 72, 680, 11), b.resources([f1]))
+    b.page(single_line(f1, "Regional Centers are listed below", 72, 700, 11) + b"\n"
+           + single_line(f1, "Customer complaints are logged", 72, 680, 11), b.resources([f1]))
+    doc = pdf_ops.open(b.save(tmp_path / "two.pdf"))
+    m = matching.find_target_text(doc, "Centers", 1)  # a different word form is not a match: page 2 is used
+    assert m.status == "found" and m.best.page_index == 1 and "the request said page 1" in m.reason
+    m = matching.find_target_text(doc, "Customer complaints", 1)  # a typo here, the exact text next door
+    assert m.status == "ambiguous" and "exact text" in m.reason, m.reason

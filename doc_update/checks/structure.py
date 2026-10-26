@@ -15,23 +15,29 @@ from pdf_ops.geometry import Rect
 _SKIP_KEYS = {"/Parent", "/P", "/Length"}
 
 
-def deep_hash(obj, _seen=None, depth=0, memo: dict | None = None) -> str:
+def deep_hash(obj, _seen=None, depth=0, memo: dict | None = None, pages: dict | None = None) -> str:
     """Content hash of a PDF object graph (independent of object numbers).
 
     ``memo`` caches the hashes of indirect objects so shared fonts and
-    resources are hashed once per document.
+    resources are hashed once per document.  ``pages`` maps page objects
+    (objgen) to their index: a reference to a page (an outline entry, a
+    link, /OpenAction, a structure element's /Pg) is hashed as "page N", so
+    editing a page does not count as a change to everything that points at it.
     """
     h = hashlib.sha256()
-    _feed(h, obj, set() if _seen is None else _seen, depth, memo)
+    _feed(h, obj, set() if _seen is None else _seen, depth, memo, pages)
     return h.hexdigest()
 
 
-def _feed(h, obj, seen, depth, memo=None):
+def _feed(h, obj, seen, depth, memo=None, pages=None):
     if depth > 40:
         h.update(b"<deep>")
         return
     if isinstance(obj, pikepdf.Object) and obj.is_indirect:
         og = obj.objgen
+        if pages is not None and og in pages:
+            h.update(b"PAGE%d" % pages[og])
+            return
         if og in seen:
             h.update(b"<ref>")
             return
@@ -39,16 +45,16 @@ def _feed(h, obj, seen, depth, memo=None):
             if og not in memo:
                 sub = hashlib.sha256()
                 memo[og] = "pending"
-                _feed_body(sub, obj, seen | {og}, depth, memo)
+                _feed_body(sub, obj, seen | {og}, depth, memo, pages)
                 memo[og] = sub.hexdigest()
             if memo[og] != "pending":
                 h.update(b"R" + memo[og].encode())
                 return
         seen = seen | {og}
-    _feed_body(h, obj, seen, depth, memo)
+    _feed_body(h, obj, seen, depth, memo, pages)
 
 
-def _feed_body(h, obj, seen, depth, memo):
+def _feed_body(h, obj, seen, depth, memo, pages=None):
     if isinstance(obj, pikepdf.Stream):
         h.update(b"S")
         try:
@@ -59,18 +65,18 @@ def _feed_body(h, obj, seen, depth, memo):
             if k in _SKIP_KEYS or k in ("/Filter", "/DecodeParms"):
                 continue
             h.update(k.encode())
-            _feed(h, obj[k], seen, depth + 1, memo)
+            _feed(h, obj[k], seen, depth + 1, memo, pages)
     elif isinstance(obj, pikepdf.Dictionary):
         h.update(b"D")
         for k in sorted(obj.keys()):
             if k in _SKIP_KEYS:
                 continue
             h.update(k.encode())
-            _feed(h, obj[k], seen, depth + 1, memo)
+            _feed(h, obj[k], seen, depth + 1, memo, pages)
     elif isinstance(obj, pikepdf.Array):
         h.update(b"A")
         for v in obj:
-            _feed(h, v, seen, depth + 1, memo)
+            _feed(h, v, seen, depth + 1, memo, pages)
     elif isinstance(obj, pikepdf.Name):
         h.update(b"N" + str(obj).encode())
     elif isinstance(obj, pikepdf.String):
@@ -104,7 +110,7 @@ class Snapshot:
     page_attributes: list[str]
 
 
-def _fonts_of_resources(res, seen_res: set, out: set, objs: set, depth=0, memo=None):
+def _fonts_of_resources(res, seen_res: set, out: set, objs: set, depth=0, memo=None, pages=None):
     if res is None or depth > 12:
         return
     if res.is_indirect:
@@ -115,7 +121,7 @@ def _fonts_of_resources(res, seen_res: set, out: set, objs: set, depth=0, memo=N
     if fonts is not None:
         for name in fonts.keys():
             f = fonts[name]
-            fh = deep_hash(f, memo=memo)
+            fh = deep_hash(f, memo=memo, pages=pages)
             out.add(fh)
             objs.add(f.objgen if f.is_indirect else ("direct", fh))
     xo = res.get("/XObject")
@@ -123,25 +129,25 @@ def _fonts_of_resources(res, seen_res: set, out: set, objs: set, depth=0, memo=N
         for name in xo.keys():
             x = xo[name]
             if str(x.get("/Subtype", "")) == "/Form":
-                _fonts_of_resources(x.get("/Resources"), seen_res, out, objs, depth + 1, memo)
+                _fonts_of_resources(x.get("/Resources"), seen_res, out, objs, depth + 1, memo, pages)
 
 
-def _annot_record(a) -> dict:
+def _annot_record(a, pages: dict | None = None) -> dict:
     rec = {
         "subtype": str(a.get("/Subtype", "")),
         "rect": tuple(round(float(v), 2) for v in a.get("/Rect", [])),
         "contents": str(a.get("/Contents", "")),
         "flags": int(a.get("/F", 0)),
         "name": str(_inherited(a, "/T") or ""),
-        "value": deep_hash(_inherited(a, "/V")) if _inherited(a, "/V") is not None else "",
-        "action": deep_hash(a.get("/A")) if a.get("/A") is not None else "",
-        "dest": deep_hash(a.get("/Dest")) if a.get("/Dest") is not None else "",
-        "ap": deep_hash(a.get("/AP")) if a.get("/AP") is not None else "",
+        "value": deep_hash(_inherited(a, "/V"), pages=pages) if _inherited(a, "/V") is not None else "",
+        "action": deep_hash(a.get("/A"), pages=pages) if a.get("/A") is not None else "",
+        "dest": deep_hash(a.get("/Dest"), pages=pages) if a.get("/Dest") is not None else "",
+        "ap": deep_hash(a.get("/AP"), pages=pages) if a.get("/AP") is not None else "",
     }
     return rec
 
 
-def _field_records(pdf) -> dict:
+def _field_records(pdf, pages: dict | None = None) -> dict:
     acro = pdf.Root.get("/AcroForm")
     out = {}
     if acro is None:
@@ -170,10 +176,10 @@ def _field_records(pdf) -> dict:
         v = _inherited(node, "/V")
         out[name_of(node)] = {
             "type": str(_inherited(node, "/FT") or ""),
-            "value": str(v) if isinstance(v, (pikepdf.String, pikepdf.Name)) else (deep_hash(v) if v is not None else ""),
+            "value": str(v) if isinstance(v, (pikepdf.String, pikepdf.Name)) else (deep_hash(v, pages=pages) if v is not None else ""),
             "flags": int(_inherited(node, "/Ff") or 0),
             "rects": [tuple(round(float(x), 2) for x in w.get("/Rect", [])) for w in widgets],
-            "ap": [deep_hash(w.get("/AP")) if w.get("/AP") is not None else "" for w in widgets],
+            "ap": [deep_hash(w.get("/AP"), pages=pages) if w.get("/AP") is not None else "" for w in widgets],
         }
 
     for f in acro.get("/Fields", []) or []:
@@ -204,13 +210,14 @@ def page_hashes(path: str | Path) -> list[str]:
     out = []
     memo: dict = {}
     with pikepdf.open(str(path)) as pdf:
+        page_no = {p.objgen: i for i, p in enumerate(pdf.pages)}
         for page in pdf.pages:
             h = hashlib.sha256()
             for key in ("/Contents", "/Resources", "/Annots", "/MediaBox", "/CropBox", "/Rotate", "/Group", "/UserUnit"):
                 v = page.obj.get(key) if key in ("/Contents", "/Annots", "/Group", "/UserUnit") else _inherited(page.obj, key)
                 h.update(key.encode())
                 if v is not None:
-                    h.update(deep_hash(v, memo=memo).encode())
+                    h.update(deep_hash(v, memo=memo, pages=page_no).encode())
             out.append(h.hexdigest())
     return out
 
@@ -222,41 +229,42 @@ def snapshot(path: str | Path, pages: set | None = None) -> Snapshot:
     font_objs: set = set()
     memo: dict = {}
     with pikepdf.open(str(path)) as pdf:
+        page_no = {p.objgen: i for i, p in enumerate(pdf.pages)}
         for page in pdf.pages:
             mb = _inherited(page.obj, "/MediaBox")
             cb = page.obj.get("/CropBox")
             boxes.append((tuple(round(float(v), 3) for v in mb), tuple(round(float(v), 3) for v in cb) if cb is not None else None,
                           int(_inherited(page.obj, "/Rotate") or 0)))
             s: set = set()
-            _fonts_of_resources(_inherited(page.obj, "/Resources"), set(), s, font_objs, memo=memo)
+            _fonts_of_resources(_inherited(page.obj, "/Resources"), set(), s, font_objs, memo=memo, pages=page_no)
             fonts_pp.append(s)
             all_fonts |= s
-            annots_pp.append([_annot_record(a) for a in (page.obj.get("/Annots", []) or [])])
-        fields = _field_records(pdf)
+            annots_pp.append([_annot_record(a, page_no) for a in (page.obj.get("/Annots", []) or [])])
+        fields = _field_records(pdf, page_no)
         signed = _is_signed(pdf)
         root = pdf.Root
         doc_level = {}
         for key in sorted(root.keys()):
             if key in ("/Pages", "/AcroForm"):
                 continue
-            doc_level["Root" + key] = deep_hash(root[key], memo=memo)
+            doc_level["Root" + key] = deep_hash(root[key], memo=memo, pages=page_no)
         acro = root.get("/AcroForm")
         if acro is not None:
             for key in sorted(acro.keys()):
                 if key != "/Fields":
-                    doc_level["AcroForm" + key] = deep_hash(acro[key], memo=memo)
+                    doc_level["AcroForm" + key] = deep_hash(acro[key], memo=memo, pages=page_no)
         info = pdf.trailer.get("/Info")
         if info is not None:
             for key in sorted(info.keys()):
                 if key not in ("/ModDate", "/Producer"):
-                    doc_level["Info" + key] = deep_hash(info[key], memo=memo)
+                    doc_level["Info" + key] = deep_hash(info[key], memo=memo, pages=page_no)
         page_attrs = []
         for page in pdf.pages:
             h = hashlib.sha256()
             for key in sorted(page.obj.keys()):
                 if key in ("/Contents", "/Resources", "/Annots", "/Parent"):
                     continue
-                h.update(key.encode() + deep_hash(page.obj[key], memo=memo).encode())
+                h.update(key.encode() + deep_hash(page.obj[key], memo=memo, pages=page_no).encode())
             page_attrs.append(h.hexdigest())
     images_pp, graphics_pp = [], []
     with pdfplumber.open(str(path)) as pl:

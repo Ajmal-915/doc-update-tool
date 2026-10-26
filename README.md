@@ -166,6 +166,23 @@ holds a complete set for the year-end pack:
 python -m doc_update.scenarios --pack "tests\data\year-end-test-pack" --provider manual --manual-dir "tests\data\manual-answers\year-end"
 ```
 
+Corpus test on any folder of PDFs (your own documents, or a downloaded collection).
+For each PDF it generates a few dozen change requests: letter and digit swaps,
+reversed phrases and lines, shorter and longer wording, two-line targets, fuzzy
+find text, the wrong page, missing characters, text that is not there,
+ambiguous words and form-field values. Every edit the tool makes is then checked
+by an independent oracle (pdfium text and pixels, fonts, other pages, qpdf),
+which shares no code with the tool's own checks. The input files are never
+modified.
+
+```powershell
+python "scripts\corpus_test.py" --corpus "C:\path\to\pdfs" --work "C:\path\to\corpus-run" --workers 4
+# results: corpus-run\report.md, corpus-run\results.jsonl; damaged candidates are kept under corpus-run\docs\
+```
+
+`--provider bedrock` runs the same requests through Bedrock. That costs money,
+about 3–6 calls per request, so start with `--max-docs 3`.
+
 ---
 
 ## Run one example change and approve it
@@ -284,7 +301,7 @@ doc_update\         pipeline, analysis, matching, measurement, checks, LLM provi
 tests\              unit, end-to-end (recorded LLM responses), scenario and live tests;
                     tests\pdfgen.py builds the synthetic PDFs; tests\data\fonts holds
                     Liberation Sans (SIL OFL) used only to build test PDFs
-scripts\            setup_windows.ps1, import_eval_data.py
+scripts\            setup_windows.ps1, import_eval_data.py, corpus_test.py (verified tests on any folder of PDFs)
 ```
 
 Libraries: pikepdf (MPL-2.0), pdfplumber and pdfminer.six (MIT), pypdfium2

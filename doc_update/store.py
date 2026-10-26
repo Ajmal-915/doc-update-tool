@@ -129,6 +129,15 @@ class Store:
         with open(src, "rb") as fh:
             if fh.read(5) != b"%PDF-":
                 raise StoreError(f"{src} is not a PDF file")
+        import pikepdf
+
+        try:  # before anything is written to the store
+            with pikepdf.open(src) as pdf_doc:
+                pages = len(pdf_doc.pages)
+        except pikepdf.PasswordError:
+            raise StoreError(f"{src.name} is password-protected; supply an unencrypted copy") from None
+        except Exception as exc:  # pikepdf.PdfError and friends
+            raise StoreError(f"{src.name} is not a readable PDF: {exc}") from None
         d = self.doc_dir(doc_id)
         if self.exists(doc_id):
             raise StoreError(f"document {doc_id!r} already exists")
@@ -140,10 +149,6 @@ class Store:
             shutil.copyfile(src, orig)
             _read_only(orig)
             digest = sha256_file(orig)
-            import pikepdf
-
-            with pikepdf.open(orig) as pdf_doc:
-                pages = len(pdf_doc.pages)
             manifest = {
                 "doc_id": doc_id,
                 "created": now(),

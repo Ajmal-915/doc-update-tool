@@ -174,9 +174,9 @@ def _validate_plan(plan: dict, fits: dict, allowed: list[str], merged: dict, min
 def run_change(store: Store, cfg: dict, doc_id: str, find: str, replace: str, page: int,
                llm: LLM | None = None, sandbox: Sandbox | None = None) -> dict:
     if not find or not find.strip():
-        raise ValueError("--find must not be empty")
+        raise ValueError("the text to find (--find) must not be empty")
     if replace is None or not replace.strip():
-        raise ValueError("--replace must not be empty")
+        raise ValueError("the replacement (--replace) must not be empty; deleting text is not supported")
     store.manifest(doc_id)
     store.verify_integrity(doc_id)
     base_path, base_label, base_sha = store.current(doc_id)

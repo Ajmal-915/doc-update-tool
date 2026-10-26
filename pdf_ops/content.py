@@ -18,6 +18,7 @@ before changing only one of the uses.
 
 from __future__ import annotations
 
+import warnings
 from dataclasses import dataclass, field
 from decimal import Decimal
 
@@ -175,6 +176,8 @@ class StreamInfo:
     name: str | None = None
     invocations: int = 1
     show_state: dict = field(default_factory=dict)  # op index -> TextState at that show op
+    show_tlm: dict = field(default_factory=dict)  # op index -> text line matrix at that show op
+    concatenated: bool = False  # all of the page's /Contents streams read as one (see interpret_page)
 
 
 @dataclass
@@ -234,6 +237,16 @@ def _parse(stream_obj) -> list:
         return []
 
 
+def _parse_checked(stream_or_page) -> tuple[list, bool]:
+    """Parse; the flag is False when the parser complained (e.g. "Unexpected end of stream")."""
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        try:
+            return list(pikepdf.parse_content_stream(stream_or_page)), not caught
+        except Exception:
+            return [], False
+
+
 class Interpreter:
     def __init__(self, pdf: pikepdf.Pdf, fonts: FontCache | None = None, max_depth: int = 12):
         self.pdf = pdf
@@ -254,9 +267,23 @@ class Interpreter:
         gs = GraphicsState()
         self._stack: list[GraphicsState] = []
         self._flow_counter = 0
+        parsed, clean = [], True
+        for s in streams:
+            ins, ok = _parse_checked(s)
+            parsed.append(ins)
+            clean = clean and ok
+        if len(streams) > 1 and not clean:
+            # the streams are one sequence and may be split anywhere between tokens, even between an
+            # operator and its operands (Acrobat Distiller does this): read them as one stream
+            ins, _ = _parse_checked(page.obj)
+            info = StreamInfo(("p", 0), None, ins, resources, concatenated=True)
+            model.streams[info.key] = info
+            model.stream_order.append(info.key)
+            gs = self._run(model, info, gs, depth=0)
+            streams = []
         for k, s in enumerate(streams):
             key = ("p", k)
-            info = StreamInfo(key, s, _parse(s), resources)
+            info = StreamInfo(key, s, parsed[k], resources)
             model.streams[key] = info
             model.stream_order.append(key)
             gs = self._run(model, info, gs, depth=0)
@@ -470,6 +497,7 @@ class Interpreter:
                     else:
                         items = [ops[0]]
                     info.show_state[idx] = gs.text.copy()
+                    info.show_tlm[idx] = tlm
                     tm = self._show(model, info, gs, tm, items, idx, op == "TJ", flow, bt_key)
                 elif op == "Do":
                     self._do(model, info, gs, ops[0], idx, depth)

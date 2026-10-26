@@ -54,7 +54,8 @@ def _stream_structure(model: PageModel) -> dict:
             op = str(ins.operator)
             if op in ("BT", "Tm", "Td", "TD", "T*", "Tj", "TJ", "'", '"', "Do", "Tf", "Tw", "Tc", "Tz"):
                 counts[op] += 1
-            if op == "TJ" and any(not isinstance(e, pikepdf.String) for e in ins.operands[0]):
+            if op == "TJ" and ins.operands and isinstance(ins.operands[0], pikepdf.Array) and \
+                    any(not isinstance(e, pikepdf.String) for e in ins.operands[0]):  # malformed streams exist
                 tj_kerning += 1
     xobjects = []
     for key, info in model.streams.items():

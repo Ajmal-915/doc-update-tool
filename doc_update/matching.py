@@ -10,9 +10,12 @@ clearly beats the next best candidate.
 
 from __future__ import annotations
 
+import re
+import unicodedata
 from dataclasses import dataclass, field
 
 from rapidfuzz import fuzz
+from rapidfuzz.distance import Levenshtein
 
 import pdf_ops
 from pdf_ops.forms import list_fields
@@ -180,7 +183,6 @@ def field_candidates(doc: pdf_ops.Document, page_index: int, source: str) -> lis
 
 def _light(text: str) -> str:
     """Normalised like the matcher, but keeping letter case."""
-    import unicodedata
 
     from pdf_ops.textnorm import DASHES, QUOTES
 
@@ -189,6 +191,66 @@ def _light(text: str) -> str:
         ch = QUOTES.get(ch, ch)
         out.append("-" if ch in DASHES else ch)
     return " ".join("".join(out).replace("\u00ad", "").split())
+
+
+NUMBER_WORDS = {w: str(i) for i, w in enumerate(
+    "zero one two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen sixteen "
+    "seventeen eighteen nineteen twenty".split())}
+NUMBER_WORDS.update({"thirty": "30", "forty": "40", "fifty": "50", "sixty": "60", "seventy": "70", "eighty": "80",
+                     "ninety": "90"})
+
+
+def _alnum(text: str) -> str:
+    # "two" and "2" are the same number; everything but letters and digits is ignored
+    words = re.split(r"(\w+)", normalize(text))
+    return "".join(ch for w in words for ch in NUMBER_WORDS.get(w, w) if ch.isalnum())
+
+
+def _marks(text: str) -> list[str]:
+    """Accents in reading order (precomposed letters and separate accent glyphs alike)."""
+    return [c for c in unicodedata.normalize("NFD", normalize(text)) if unicodedata.combining(c)]
+
+
+def coverage_problem(source: str, text: str) -> str | None:
+    """Why ``text`` (found in the PDF) is not the same wording as ``source``, or None.
+
+    A fuzzy score alone accepts a long phrase with a whole word or a number missing ("... Regressions"
+    for "... Regressions 93"); replacing that span would leave the missing part behind or duplicate it.
+    Spacing, punctuation, hyphenation, quotes, case and small typos may differ; numbers and whole words
+    may not.
+    """
+    ma, mb = _marks(source), _marks(text)
+    if ma != mb:
+        # "Königsberg" (or TeX's o + separate ¨) for "Konigsberg": the replacement would drop or add accents
+        return f"the accents differ (the PDF has {text[:40]!r})"
+    tokens, found = normalize(source).split(), normalize(text).strip()
+    for tok, present in ((tokens[:1], found.startswith), (tokens[-1:], found.endswith)):
+        if tok and not any(ch.isalnum() for ch in tok[0]) and not present(tok[0]):
+            # a separate mark at either end ("ALEXANDRE MIRZAYANCE. :" in a caption with a column of colons)
+            return f"the PDF text does not include the separate {tok[0]!r} at the {'start' if present == found.startswith else 'end'}"
+    a, b = _alnum(source), _alnum(text)
+    if a == b:
+        return None
+    edited = 0
+    for op in Levenshtein.opcodes(a, b):
+        if op.tag == "equal":
+            continue
+        gone, extra = a[op.src_start:op.src_end], b[op.dest_start:op.dest_end]
+        if any(ch.isdigit() for ch in gone + extra):
+            return f"the numbers differ ({gone or '-'!r} in the request, {extra or '-'!r} in the PDF)"
+        if op.src_start == 0 or op.src_end == len(a) or op.dest_start == 0 or op.dest_end == len(b):
+            # at either end of the text: a different word form ("Center" for "Centers"), not a typo
+            return (f"the text ends differently ({gone or '-'!r} in the request, {extra or '-'!r} in the PDF)"
+                    if op.src_end == len(a) or op.dest_end == len(b) else
+                    f"the text starts differently ({gone or '-'!r} in the request, {extra or '-'!r} in the PDF)")
+        if max(len(gone), len(extra)) >= 3:
+            what = f"{gone!r} is missing in the PDF text" if gone and not extra else (
+                f"the PDF text has {extra!r} in addition" if extra and not gone else f"{gone!r} reads {extra!r}")
+            return f"a word differs: {what}"
+        edited += max(len(gone), len(extra))
+    if edited > max(2, 0.1 * len(a)):
+        return f"{edited} letters differ"
+    return None
 
 
 def _decide(cands: list[Candidate], min_score: float, margin: float, source: str = ""):
@@ -207,6 +269,15 @@ def _decide(cands: list[Candidate], min_score: float, margin: float, source: str
     return "found", cands
 
 
+def _raw_contains(doc: pdf_ops.Document, page_index: int, source: str) -> bool:
+    """Whether the page's glyphs, in drawing order and ignoring spaces, contain the source text."""
+    needle = _alnum(source)
+    if not needle:
+        return False
+    raw = _alnum("".join(g.text for g in doc.model(page_index).glyphs))
+    return needle in raw
+
+
 def find_target_text(doc: pdf_ops.Document, source: str, page_number: int, min_score: float = 90.0,
                      margin: float = 5.0) -> MatchResult:
     page_index = page_number - 1
@@ -215,6 +286,7 @@ def find_target_text(doc: pdf_ops.Document, source: str, page_number: int, min_s
     stages = [[page_index], [p for p in (page_index - 1, page_index + 1) if 0 <= p < doc.page_count]]
     searched: list[int] = []
     all_cands: list[Candidate] = []
+    rejected: list[tuple[Candidate, str]] = []
     for stage in stages:
         cands: list[Candidate] = []
         for p in stage:
@@ -222,7 +294,26 @@ def find_target_text(doc: pdf_ops.Document, source: str, page_number: int, min_s
             cands += text_candidates(doc, p, source)
             cands += field_candidates(doc, p, source)
         all_cands += cands
-        verdict, ranked = _decide(cands, min_score, margin, source)
+        kept = []
+        for c in cands:
+            problem = coverage_problem(source, c.text) if c.score >= min_score else None
+            if problem:
+                rejected.append((c, problem))
+            else:
+                kept.append(c)
+        verdict, ranked = _decide(kept, min_score, margin, source)
+        if verdict == "found" and _alnum(ranked[0].text) != _alnum(source) and stage is stages[0]:
+            # only approximately the request ("Center" for "Centers"): if a neighbouring page has the exact
+            # text, the request may simply name the wrong page; let the reviewer decide
+            exact = [c for q in stages[1] for c in text_candidates(doc, q, source) + field_candidates(doc, q, source)
+                     if c.score >= min_score and _alnum(c.text) == _alnum(source)]
+            if exact:
+                best, other = ranked[0], exact[0]
+                searched += stages[1]
+                return MatchResult(
+                    "ambiguous", None, [best, other],
+                    f"page {best.page_index + 1} has a close match ({best.text[:60]!r}) and page {other.page_index + 1} "
+                    f"has the exact text ({other.text[:60]!r}); the reviewer must say which one is meant", searched)
         if verdict == "found":
             best = ranked[0]
             reason = f"matched with score {best.score:.0f} on page {best.page_index + 1}"
@@ -233,8 +324,20 @@ def find_target_text(doc: pdf_ops.Document, source: str, page_number: int, min_s
             return MatchResult(
                 "ambiguous", None, ranked,
                 f"{len(ranked)} places match equally well; the reviewer must say which one is meant", searched)
+        if stage is stages[0] and _raw_contains(doc, page_index, source):
+            # the glyphs are there but the line/word layout could not be read reliably (e.g. advance widths
+            # that do not match the glyph positions); a match on a neighbouring page would be the wrong place
+            return MatchResult(
+                "not_found", None, sorted(cands, key=lambda c: -c.score)[:3],
+                f"the glyphs on page {page_number} contain this text (possibly inside other words or numbers), but "
+                "it could not be located there as a phrase (the page's layout may be unreadable: overlapping or "
+                "out-of-order glyphs); text on another page was not used; a person should make this change", searched)
     ranked = sorted(all_cands, key=lambda c: -c.score)[:3]
-    if ranked:
+    if rejected:
+        c, problem = max(rejected, key=lambda t: t[0].score)
+        reason = (f"the closest text on page {c.page_index + 1} reads {c.text[:80]!r}, but {problem}; only spacing, "
+                  "punctuation, case and small typos may differ from the request")
+    elif ranked:
         reason = (f"no match scored {min_score:.0f} or more on page {page_number} or the pages either side; "
                   f"closest was {ranked[0].score:.0f} on page {ranked[0].page_index + 1}: {ranked[0].text[:80]!r}")
     else:

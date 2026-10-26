@@ -152,3 +152,20 @@ def test_cli_round_trip(pdfs, tmp_path):
     assert rc == 2 and out["status"] == "manual_review"
     rc, out = cli("approve", "--doc-id", "cli", "--change", "c20990101T000000Z-abcdef")
     assert rc == 1 and out["status"] == "error"
+
+
+def test_password_protected_or_broken_pdf_is_refused_cleanly(pdfs, tmp_path):
+    # corpus test: these raised pikepdf exceptions out of the API and left a half-made document behind
+    import pikepdf
+
+    locked = tmp_path / "locked.pdf"
+    with pikepdf.open(pdfs["report"]) as pdf:
+        pdf.save(locked, encryption=pikepdf.Encryption(user="secret", owner="secret"))
+    broken = tmp_path / "broken.pdf"
+    broken.write_bytes(b"%PDF-1.7\n1 0 obj << /Type /Catalog /Pages 2 0 R >> endobj\n%%EOF\n")
+    ov = {"store": {"root": str(tmp_path / "store")}}
+    r = api.ingest_document(locked, "locked", None, ov)
+    assert r["status"] == "error" and "password-protected" in r["error"]
+    r = api.ingest_document(broken, "broken", None, ov)
+    assert r["status"] == "error" and "not a readable PDF" in r["error"]
+    assert not (tmp_path / "store").exists() or not any((tmp_path / "store").iterdir())

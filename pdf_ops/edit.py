@@ -51,6 +51,8 @@ class Insertion:
     size: Decimal | None = None  # temporary Tf size (reduced_font), None = unchanged
     space_advance: Decimal | None = None  # text-space advance for None codes (unscaled by Th)
     text: str = ""
+    word_kern: Decimal = Decimal(0)  # extra text-space advance after each space (fills a justified box)
+    char_kern: Decimal = Decimal(0)  # extra text-space advance between two letters (letter spacing)
 
 
 @dataclass
@@ -77,6 +79,10 @@ class BlockInsert:
     fill_ops: tuple = ()
     space_advance: Decimal | None = None
     ctm: tuple = G.IDENTITY
+    # when set, ``after`` is a show instruction inside a text object: the object is closed there, the block
+    # drawn, and the object reopened; these positioning instructions (copied from the original text object)
+    # then rebuild the text line matrix exactly as the viewer computed it, so the block keeps the reading order
+    restore_ops: list | None = None
 
 
 @dataclass
@@ -226,7 +232,9 @@ class _Committer:
                 k = key[1]
                 new = self.pdf.make_stream(data)
                 contents = self.page.get("/Contents")
-                if isinstance(contents, pikepdf.Array):
+                if self.model.streams[key].concatenated:
+                    self.page.Contents = new  # the page's streams were read as one; write them as one
+                elif isinstance(contents, pikepdf.Array):
                     arr = pikepdf.Array(list(contents))
                     arr[k] = new
                     self.page.Contents = arr
@@ -275,11 +283,13 @@ class _FlowRewriter:
                 continue
             self._rewrite_segment(instrs, segment, replacements)
         out = []
+        self.position_of = {}  # original index -> position of its last instruction in the result
         for idx, ins in enumerate(instrs):
             if idx in replacements:
                 out.extend(replacements[idx])
             else:
                 out.append(ins)
+            self.position_of[idx] = len(out) - 1
         return out
 
     def _rewrite_segment(self, instrs, segment, replacements):
@@ -316,6 +326,8 @@ class _FlowRewriter:
                 if fsize == 0 or th == 0:
                     raise UnsupportedError("zero font size or horizontal scale")
                 n = _q(-dx * 1000 / (fsize * th))
+                if n == 0:
+                    return Decimal(0)  # below what a TJ number can express; do not write "0" kerns
                 flush_buf()
                 cur.append(_num_obj(n))
                 return -n / 1000 * fsize * th
@@ -348,15 +360,22 @@ class _FlowRewriter:
                             out_ops.append(pikepdf.ContentStreamInstruction(
                                 [pikepdf.Name("/" + st.font_res), _num_obj(new_size)], pikepdf.Operator("Tf")))
                         pen = Decimal(0)
-                        for c in ins_.codes:
+                        last = len(ins_.codes) - 1
+                        for ci, c in enumerate(ins_.codes):
                             if c is None:
                                 sp = (ins_.space_advance if ins_.space_advance is not None else Decimal("0.25") * new_size)
-                                pen += emit_kern(sp * th, new_size)
+                                pen += emit_kern((sp + ins_.word_kern) * th, new_size)
                                 continue
                             adv = (font.width(c) * new_size + st.tc + (st.tw if font.is_word_space(c, font.code_length) else 0)) * th
                             self._expect_new(g, pen, adv, font, c, new_size)
                             buf.extend(font.code_bytes(c))
                             pen += adv
+                            nxt = ins_.codes[ci + 1] if ci < last else None
+                            if font.to_unicode(c) == " ":
+                                if ins_.word_kern:
+                                    pen += emit_kern(ins_.word_kern * th, new_size)
+                            elif ins_.char_kern and nxt is not None and font.to_unicode(nxt) != " ":
+                                pen += emit_kern(ins_.char_kern * th, new_size)
                         offset += pen
                         if ins_.size is not None:
                             close_tj()
@@ -472,8 +491,11 @@ def apply_plan(doc: Document, plan: EditPlan) -> EditResult:
 
     keys = {model.glyphs[g].stream for g in list(plan.remove) + list(plan.shift)} | {model.glyphs[i.anchor].stream for i in plan.inserts}
     edits: dict[tuple, list] = {}
+    positions: dict[tuple, dict] = {}
     for key in keys:
-        edits[key] = _FlowRewriter(model, key, plan, expected).rewrite()
+        rw = _FlowRewriter(model, key, plan, expected)
+        edits[key] = rw.rewrite()
+        positions[key] = rw.position_of
     # glyphs in untouched streams are expected unchanged
     touched_gids = {e[1].gid for e in expected if e[0] == "orig"}
     for g in model.glyphs:
@@ -485,9 +507,15 @@ def apply_plan(doc: Document, plan: EditPlan) -> EditResult:
         instrs = edits.get(key)
         if instrs is None:
             instrs = list(model.streams[key].instructions)
-        # the index refers to the original list; map it through replacements by locating the ET
+        # the index refers to the original list; map it through the rewritten instructions
         new_block = _block_instructions(b, expected)
-        pos = _locate_original(model.streams[key].instructions, instrs, after_idx)
+        if b.restore_ops is not None:
+            I, O = pikepdf.ContentStreamInstruction, pikepdf.Operator
+            new_block = [I([], O("ET"))] + new_block + [I([], O("BT"))] + list(b.restore_ops)
+        if key in positions and after_idx in positions[key]:
+            pos = positions[key][after_idx]
+        else:
+            pos = _locate_original(model.streams[key].instructions, instrs, after_idx)
         instrs[pos + 1:pos + 1] = new_block
         edits[key] = instrs
 
