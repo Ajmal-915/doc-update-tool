@@ -22,8 +22,13 @@ checks:
   render_dpi: 150
   pixel_margin: 2                 # pixels allowed to change just outside the area's edge
 
+recommend:
+  max_edits: 10                   # most edits one recommendation may make on its page
+
 llm:
   provider: bedrock               # bedrock | offline (plain-code stand-in) | replay (recorded responses)
+                                  # | manual (answers written by hand into manual_dir)
+  editor_provider: null           # optional: another provider for the recommendation edit plan only
   region: null                    # null = use the AWS_REGION environment variable
   # Model IDs per role.  "auto" picks the newest Claude Sonnet inference profile the key can use
   # (listed on first run and cached in <store>/.model_cache.json).  You can also give an ID, e.g.

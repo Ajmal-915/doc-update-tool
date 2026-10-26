@@ -3,10 +3,15 @@
 Used when no Bedrock key is available (tests, offline scenario runs).  It
 reproduces what a careful model would do from the measurements alone: the
 layout advice repeats the measured boundary, the plan picks the first
-feasible method, and the script comes from a fixed template.
+feasible method, and the script comes from a fixed template.  The edit plan
+for a recommendation understands only plain instructions ("change X to Y",
+"replace 'X' with 'Y'", several of them separated by ';', "throughout"); a
+real model is needed for free wording.
 """
 
 from __future__ import annotations
+
+import re
 
 from .apidoc import render_template
 from .base import LLM, LLMError
@@ -72,3 +77,68 @@ class OfflineLLM(LLM):
         self._count("visual_review")
         return {"looks_correct": True,
                 "concerns": [{"severity": "info", "description": "offline provider: no visual review was performed"}]}
+
+
+    def plan_edits(self, context: dict, image_png: bytes, image_info: dict) -> dict:
+        self._count("editor")
+        rec = " ".join(str(context["recommendation"]).split())
+        everywhere = bool(re.search(r"\b(throughout|everywhere|all occurrences|every occurrence|each occurrence|"
+                                    r"wherever)\b", rec, re.I))
+        pairs = _instruction_pairs(rec)
+        plan = {"understanding": f"offline provider: {len(pairs)} plain instruction(s) recognised",
+                "edits": [], "not_possible": []}
+        if not pairs:
+            plan["needs_clarification"] = ("offline provider: no plain instruction such as \"change X to Y\" was found; "
+                                           "a language model is needed for this wording")
+            return plan
+        sources = [(ln["id"], ln["text"]) for ln in context["lines"]] + \
+                  [(f["id"], f["value"]) for f in context["form_fields"] if f.get("value")]
+        for old, new in pairs:
+            hits = _occurrences(old, sources)
+            if not hits:
+                plan["not_possible"].append({"description": f"change {old!r} to {new!r}",
+                                             "reason": "this text is not on the page"})
+                continue
+            if len(hits) > 1 and not everywhere:
+                plan["edits"] = []
+                plan["needs_clarification"] = (f"{old!r} appears {len(hits)} times on the page "
+                                               f"({', '.join(h[0] for h in hits)}); say which one, or 'throughout'")
+                return plan
+            for lid, found in hits:
+                plan["edits"].append({"line_ids": [lid], "current_text": found, "new_text": _same_case(found, new),
+                                      "reason": f"change {old!r} to {new!r}"})
+        return plan
+
+
+# a quoted phrase: "..." or \u201c...\u201d, or '...' / \u2018...\u2019 whose quotes are not apostrophes inside a word
+_Q = "(?:\"([^\"]+)\"|\u201c([^\u201d]+)\u201d|(?<!\\w)['\u2018](.+?)['\u2019](?!\\w))"
+_PAIR = re.compile(_Q + r"\s*(?:->|\u2192|\bto\b|\bwith\b|\bby\b|\binto\b)\s*" + _Q, re.I)
+_VERB = re.compile(r"^(?:please\s+)?(?:change|replace|update|amend|correct|rename|reword)\s+(?:the\s+)?"
+                   r"(?:(?:text|word|words|phrase|wording|heading|label|title|line)\s+)?(.+?)\s+"
+                   r"(?:to|with|by|into)\s+(.+?)$", re.I)
+_TAIL = re.compile(r"\s*,?\s*\b(throughout|everywhere|on this page|wherever it appears|in all occurrences)\b.*$", re.I)
+
+
+def _instruction_pairs(rec: str) -> list[tuple[str, str]]:
+    out = []
+    for clause in re.split(r"[;\n]|(?<=[.!?])\s+(?=[A-Z])", rec):
+        quoted = [("".join(g[:3]).strip(), "".join(g[3:]).strip()) for g in _PAIR.findall(clause)]
+        if quoted:
+            out += quoted
+            continue
+        m = _VERB.match(_TAIL.sub("", clause.strip().rstrip(".!?")))
+        if m:
+            out.append((m.group(1).strip(" ,"), m.group(2).strip(" ,")))
+    return out
+
+
+def _occurrences(old: str, sources: list[tuple[str, str]]) -> list[tuple[str, str]]:
+    want = " ".join(old.split())
+    exact = [(lid, want) for lid, text in sources for _ in re.finditer(re.escape(want), text)]
+    if exact:
+        return exact
+    return [(lid, m.group(0)) for lid, text in sources for m in re.finditer(re.escape(want), text, re.I)]
+
+
+def _same_case(found: str, new: str) -> str:
+    return new.upper() if found.isupper() and not new.isupper() else new

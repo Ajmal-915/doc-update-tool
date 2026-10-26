@@ -261,7 +261,8 @@ class Store:
     def status(self, doc_id: str) -> dict:
         m = self.manifest(doc_id)
         path, label, sha = self.current(doc_id)
-        pending = [dict(change_id=k, **{x: v.get(x) for x in ("status", "created", "find", "replace", "method")})
+        keys = ("status", "created", "find", "replace", "method", "kind", "page", "recommendation", "edits")
+        pending = [dict(change_id=k, **{x: v[x] for x in keys if v.get(x) is not None})
                    for k, v in m["changes"].items() if v.get("status") == "updated" and not v.get("decision")]
         return {
             "doc_id": doc_id,

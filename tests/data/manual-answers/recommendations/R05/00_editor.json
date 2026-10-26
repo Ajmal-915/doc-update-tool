@@ -1,0 +1,22 @@
+{
+ "understanding": "Two wording changes in the disclaimer paragraph.",
+ "edits": [
+  {
+   "line_ids": [
+    "L9"
+   ],
+   "current_text": "strictly at your own risk",
+   "new_text": "entirely at your own risk",
+   "reason": "entirely instead of strictly"
+  },
+  {
+   "line_ids": [
+    "L4"
+   ],
+   "current_text": "Smartsheet",
+   "new_text": "Northwind Group",
+   "reason": "refer to us as Northwind Group in the disclaimer"
+  }
+ ],
+ "not_possible": []
+}

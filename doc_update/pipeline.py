@@ -51,6 +51,7 @@ class Context:
     replace: str
     page: int
     report: dict = field(default_factory=dict)
+    near: list | None = None  # [x0, y0, x1, y1] in PDF points: picks one of several equal matches (verified plans)
 
     def audit(self, event: str, **details) -> None:
         self.store.audit(self.doc_id, event, change_id=self.change_id, **details)
@@ -187,26 +188,7 @@ def run_change(store: Store, cfg: dict, doc_id: str, find: str, replace: str, pa
         "request": {"find": find, "replace": replace, "page": int(page)}, "attempts": [], "warnings": [],
     }
     ctx.audit("change_started", base_version=base_label, page=int(page), find_sha256=_h(find), replace_sha256=_h(replace))
-    try:
-        if llm is None:
-            llm = make_llm(cfg, audit=lambda **kw: ctx.audit(kw.pop("event", "llm_call"), **kw), record_name=change_id)
-        else:
-            llm.audit = lambda **kw: ctx.audit(kw.pop("event", "llm_call"), **kw)
-        ctx.report["llm"] = {"provider": llm.provider, "models": llm.models()}
-        sandbox = sandbox or make_sandbox(cfg)
-        result = _run(ctx, llm, sandbox)
-    except ManualReview as mr:
-        result = _manual(ctx, mr.code, mr.reason, **mr.details)
-    except BudgetExceeded as exc:
-        result = _manual(ctx, "llm_budget", f"LLM budget exceeded: {exc}")
-    except LLMError as exc:
-        result = _manual(ctx, "llm_error", f"the language model could not be used: {exc}")
-    except Exception as exc:  # never leave a half-finished change behind
-        ctx.report["error_trace"] = traceback.format_exc()[-4000:]
-        result = _manual(ctx, "internal_error", f"internal error: {type(exc).__name__}: {exc}")
-    finally:
-        if llm is not None:
-            ctx.report.setdefault("llm", {})["budget"] = llm.budget.to_dict()
+    result = execute(ctx, llm, sandbox)
     _write_report(ctx)
     if result["status"] == "manual_review":
         dest = store.finish_manual_review(doc_id, change_id)
@@ -222,6 +204,48 @@ def run_change(store: Store, cfg: dict, doc_id: str, find: str, replace: str, pa
     ctx.audit("change_finished", status=result["status"], method=ctx.report.get("method"),
               reason_code=ctx.report.get("reason_code"))
     return result
+
+
+def execute(ctx: Context, llm: LLM | None, sandbox: Sandbox | None) -> dict:
+    """Steps 1-10 for one edit, every failure turned into a manual-review result (no store bookkeeping)."""
+    try:
+        if llm is None:
+            llm = make_llm(ctx.cfg, audit=lambda **kw: ctx.audit(kw.pop("event", "llm_call"), **kw), record_name=ctx.change_id)
+        else:
+            llm.audit = lambda **kw: ctx.audit(kw.pop("event", "llm_call"), **kw)
+        ctx.report["llm"] = {"provider": llm.provider, "models": llm.models()}
+        sandbox = sandbox or make_sandbox(ctx.cfg)
+        result = _run(ctx, llm, sandbox)
+    except ManualReview as mr:
+        result = _manual(ctx, mr.code, mr.reason, **mr.details)
+    except BudgetExceeded as exc:
+        result = _manual(ctx, "llm_budget", f"LLM budget exceeded: {exc}")
+    except LLMError as exc:
+        result = _manual(ctx, "llm_error", f"the language model could not be used: {exc}")
+    except Exception as exc:  # never leave a half-finished change behind
+        ctx.report["error_trace"] = traceback.format_exc()[-4000:]
+        result = _manual(ctx, "internal_error", f"internal error: {type(exc).__name__}: {exc}")
+    finally:
+        if llm is not None:
+            ctx.report.setdefault("llm", {})["budget"] = llm.budget.to_dict()
+    return result
+
+
+def _pick_by_position(match, near: list, page_index: int):
+    """The one equal match at a verified position (the line it is on), if exactly one is there."""
+    x0, y0, x1, y1 = near
+    cy = (y0 + y1) / 2
+    on_line = [c for c in match.candidates
+               if c.page_index == page_index and c.bbox is not None and c.bbox.y0 - 2 <= cy <= c.bbox.y1 + 2
+               and min(c.bbox.x1, x1) > max(c.bbox.x0, x0) - 1]
+    if len(on_line) != 1:
+        return match
+    best = on_line[0]
+    from .matching import MatchResult
+
+    return MatchResult("found", best, [best] + [c for c in match.candidates if c is not best],
+                       f"one of {len(match.candidates)} equal matches, picked by its verified position on page "
+                       f"{page_index + 1}", match.searched_pages)
 
 
 def _h(text: str) -> str:
@@ -269,6 +293,8 @@ def _run(ctx: Context, llm: LLM, sandbox: Sandbox) -> dict:
     # ---------------------------------------------------------- step 2
     match = find_target_text(doc, ctx.find, ctx.page, float(cfg["matching"]["min_score"]),
                              float(cfg["matching"]["ambiguity_margin"]))
+    if match.status == "ambiguous" and ctx.near:
+        match = _pick_by_position(match, ctx.near, page_index)
     rep["match"] = match.to_dict()
     ctx.audit("match", status=match.status, score=match.best.score if match.best else None)
     if match.status != "found":

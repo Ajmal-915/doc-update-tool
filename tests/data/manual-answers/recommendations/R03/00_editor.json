@@ -1,0 +1,14 @@
+{
+ "understanding": "Only the Product line under COST OF SALES (L9) becomes Goods; the Product line under NET SALES (L5) stays.",
+ "edits": [
+  {
+   "line_ids": [
+    "L9"
+   ],
+   "current_text": "Product",
+   "new_text": "Goods",
+   "reason": "rename the Product line under Cost of Sales"
+  }
+ ],
+ "not_possible": []
+}

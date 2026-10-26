@@ -6,7 +6,7 @@ target Windows machine; see "What was not run here" below.
 
 ## Test suite
 
-`python -m pytest` (offline, no Bedrock key): **all tests pass** — 186 passed,
+`python -m pytest` (offline, no Bedrock key): **all tests pass** — 200 passed,
 2 skipped (Windows Job Object test, generated cases not imported), 1 deselected (live).
 
 | File | Tests | What it covers |
@@ -15,11 +15,12 @@ target Windows machine; see "What was not run here" below.
 | `tests/test_pdf_ops.py` | 28 | Fonts (encodings, widths, real subset coverage, AFM metrics), interpreter (all positioning operators, kerning, text-matrix size, form XObject matrix), edit engine (following text stays in place, same font resource, shared content stream copied, XObject drawn twice copied and renamed, other page keeps the original), methods a–e, reflow (free space, justified, mixed fonts refused). |
 | `tests/test_sandbox.py` | 34 | Static rejection of imports, exec/eval/compile/__import__/getattr, dunder access, absolute and parent paths, computed file names, `pikepdf.Job`, classes; empty environment (proved at runtime); audit hook blocks reads/writes outside the folder, subprocess, sockets, `os.system`, file deletion; timeout; memory limit; errors reported. |
 | `tests/test_pipeline_e2e.py` | 24 | Whole pipeline offline with **recorded Bedrock Converse responses**: in-place change, white-box script rejected then corrected, crashing script retried, planner's wrong order overridden, all attempts failing → manual review, form field, cautious layout advice disabling expansion, LLM call budget, missing key; PDF text is passed only inside the untrusted `<document_data>` block; manual-review reasons (not found, ambiguous, signed, scanned, missing glyphs, not enough space, graphic text, no change). |
-| `tests/test_llm.py` | 14 | Converse logic without network: temperature refused → retried without it, missing tool call → one reminder, schema validation, throttling retry, secrets scrubbed from errors, budget, audit fields, prompt hash, key/region required, bearer token preferred by botocore, model auto-selection. |
+| `tests/test_llm.py` | 16 | Converse logic without network: temperature refused → retried without it, missing tool call → one reminder, schema validation, throttling retry, secrets scrubbed from errors, budget, audit fields, prompt hash, key/region required, bearer token preferred by botocore, model auto-selection. |
 | `tests/test_store.py` | 9 | Read-only original with SHA-256, v001/v002 chain, reject deletes the candidate, stale candidate refused, tampered candidate/original refused, manual review recorded without PDF, CLI round trip and exit codes. |
 | `tests/test_matching.py` | 13 | Normalisation, exact/approximate/cross-line matches, ambiguity with positions, neighbouring page, form-field values; a missing number, word, accent or end mark is not a match; a close match does not beat the exact text on the next page. |
 | `tests/test_analysis.py` | 9 | Words/chars, effective size from the text matrix, encodings, signed/scanned/shared detection, fields, measurements (table cell, two columns, TOC dot leaders, free space, missing glyphs). |
 | `tests/test_real_world_layouts.py` | 8 | Layouts found in the corpus test: one text object per column (reflow keeps the reading order), an instruction split across content streams, individually positioned glyphs, Tc with a size change, a line longer than its column, a media box not at the origin, a rotated page, columns aligned with runs of spaces. |
+| `tests/test_recommend.py` | 12 | Recommendations: screenshot + numbered lines to the editor, several edits in one candidate and one approval, invented quotes, repeated text (by context, by line, by position), overlapping edits, all-or-nothing when one edit cannot be made, not possible / needs clarification, form fields, offline instructions, CLI, and the 13 year-end recommendations with hand-written plans. |
 | `tests/test_scenarios.py` | 6 | Scenario loader (several layouts), synthetic pack end to end, year-end pack with the offline stand-in and with the hand-written LLM answers (all 28 PASS); generated cases (skipped here — not available). |
 
 A 60-page PDF goes through the whole offline pipeline in about 2.5 s: the checks
@@ -125,6 +126,57 @@ UNSAFE = an edit was produced where manual review was expected, ERROR).
 D01 and D02 are always expected to go to manual review. The loader accepts
 several layouts of `scenarios.json`; if it cannot map a scenario it reports the
 keys it found instead of guessing.
+
+### Recommendations in plain words (year-end pack; edit plans written by hand)
+
+13 recommendations for the year-end report, written the way a compliance team would
+(`tests/data/recommendations/year-end.json`), went through `recommend`. For each one,
+I wrote the editor's edit plan by hand (`--editor-provider manual`), working from the
+same page screenshot and line listing a model receives. The other roles ran offline.
+Every plan went through the same code checks and safety pipeline as a Bedrock answer.
+
+All 13 PASS:
+- **6 updated, 7 edits in total**, each in one candidate:
+  - R02 and R05 combine two edits each;
+  - R03 changes the "Product" line under Cost of Sales and leaves the one under Net
+    Sales, a repeated label that exact find/replace refuses as ambiguous;
+  - R07 and R08 are form-field values.
+- **7 manual review, each with the right reason:**
+  - missing characters (R04);
+  - an image button (R06);
+  - a colour change alongside a rename (R09: nothing applied);
+  - a vague request (R10);
+  - a scanned page (R11, refused before any LLM call);
+  - a recommendation naming a section and sentence that are not on the page
+    (R12: the editor asks instead of guessing).
+
+The plan check narrowed each edit to the words that change, e.g. "GROSS MARGIN" →
+"GROSS PROFIT" became "MARGIN" → "PROFIT", and "in connection with the monthly
+projected" → "… the projected" became "monthly projected" → "projected".
+
+| ID | Page | Expected | Result | Edits / reason | Verdict |
+|---|---|---|---|---|---|
+| R01 | 4 | updated | updated | 'MARGIN' → 'PROFIT' (original_box) | PASS |
+| R02 | 4 | updated | updated | 'Sales and Marketing' → 'Marketing' (original_box); 'Other' → 'Other Operating' (horizontal_expansion) | PASS |
+| R03 | 4 | updated | updated | 'Product' → 'Goods' (original_box) | PASS |
+| R04 | 4 | manual_review (missing_glyphs) | manual_review | missing_glyphs: edit 1 of 1 ('In-Process Research and Development' -> 'In-Process Research and Development (R&D)') cannot be made safely: the embedded font ESJPOF+CenturyGothic | PASS |
+| R05 | 7 | updated | updated | 'strictly' → 'entirely' (horizontal_expansion); 'Smartsheet' → 'Northwind Group' (horizontal_expansion) | PASS |
+| R06 | 7 | manual_review (not_possible) | manual_review | not_possible: the recommendation cannot be done by replacing text on this page: remove the green 'Try Smartsheet for FREE' button: the button is an image, not text on the pag | PASS |
+| R07 | 3 | updated | updated | 'It its' → 'In its' (form_field_update) | PASS |
+| R08 | 1 | updated | updated | 'COMPANY NAME' → 'NORTHWIND GROUP' (form_field_update) | PASS |
+| R09 | 4 | manual_review (partly_not_possible) | manual_review | partly_not_possible: part of the recommendation cannot be done by replacing text on this page: print the column headers ([CURRENT YEAR], [1 YEAR PRIOR], [2 YEARS PRIOR]) in blue: a  | PASS |
+| R10 | 4 | manual_review (needs_clarification) | manual_review | needs_clarification: the recommendation is not clear enough to apply: Which labels should change, and to what wording? The page has 30 labels in the income statement table. | PASS |
+| R11 | 7 | manual_review (scanned_page) | manual_review | scanned_page: page 7 is a scanned image; its text cannot be edited | PASS |
+| R12 | 6 | manual_review (needs_clarification) | manual_review | needs_clarification: the recommendation is not clear enough to apply: Page 6 has no 'summary of significant accounting policies' and no sentence about cash flows. The only 'monthly  | PASS |
+| R13 | 6 | updated | updated | 'monthly projected' → 'projected' (original_box) | PASS |
+
+Unit tests (`tests/test_recommend.py`, `tests/test_llm.py`) also cover:
+- quotes that are not on the page, repeated text without a distinguishing line, and
+  overlapping edits: the plan is rejected;
+- an impossible second edit: nothing is changed;
+- form fields, approval of a multi-edit candidate, the CLI, and the Bedrock request
+  (the screenshot, the recommendation and the listing are sent; text from the PDF
+  cannot close the data block).
 
 ### Real-world corpus: 116 PDFs, 2,992 generated change requests (offline provider)
 
@@ -267,6 +319,10 @@ Verdicts: PASS 20
 | `checks_failed` | every attempt (2 retries per method) failed the safety checks or did not run | the report keeps every script, its output and the failed checks |
 | `llm_budget`, `llm_error` | call/cost limit reached, missing key, Bedrock error | fix the configuration and rerun |
 | `internal_error` | unexpected exception (trace in the report) | report it |
+| `needs_clarification` | (recommendations) the editor cannot tell what is meant; its question is in the reason | answer it by rewording the recommendation |
+| `not_possible`, `partly_not_possible` | (recommendations) the request is not, or not only, a replacement of text on that page (images, colours, layout, new paragraphs, other pages); nothing is applied | make that part by hand, or split the recommendation |
+| `plan_rejected` | (recommendations) a quoted text is not on the page word for word, appears more than once without a distinguishing line, or edits overlap | reword or rerun; the report lists each problem |
+| any of the above for one edit | (recommendations) the first edit that cannot be made safely; nothing is applied | the report has every edit's own report under `edits/NN/` |
 
 ## What was not run here
 
@@ -284,7 +340,11 @@ Verdicts: PASS 20
   accepts its default temperature, so the configured `temperature: 0` is sent,
   refused, and the call retried without it (recorded in the audit log); determinism
   then comes from the JSON-schema tool output, validation in code, and the checks.
-* **make_cases.py cases**, and the year-end pack with a live model (see above).
+* **make_cases.py cases**, and the year-end pack and the recommendations with a live
+  model (see above). The editor prompt was tested with hand-written answers. Its
+  behaviour with Claude on Bedrock (wording, the document's style, when to ask)
+  should be checked with `python -m doc_update.recommend_pack --provider bedrock`
+  before production use.
 
 ## Known limitations
 

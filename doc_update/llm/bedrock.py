@@ -249,6 +249,12 @@ class ConverseLLM(LLM):
         return self._call("visual_review", prompts.REVIEW_SYSTEM, content, schemas.VISUAL_REVIEW, model_role="vision")
 
 
+    def plan_edits(self, context: dict, image_png: bytes, image_info: dict) -> dict:
+        content = [{"image": {"format": "png", "source": {"bytes": image_png}}},
+                   {"text": prompts.editor_user(context, image_info)}]
+        return self._call("editor", prompts.EDITOR_SYSTEM, content, schemas.EDIT_PLAN, model_role="vision")
+
+
 def _tool_input(resp: dict, name: str):
     content = (resp.get("output", {}) or {}).get("message", {}).get("content", []) or []
     for block in content:

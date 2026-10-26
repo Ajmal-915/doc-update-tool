@@ -1,0 +1,14 @@
+{
+ "understanding": "Rename the GROSS MARGIN line of the income statement table to gross profit, in the label's capitals.",
+ "edits": [
+  {
+   "line_ids": [
+    "L12"
+   ],
+   "current_text": "GROSS MARGIN",
+   "new_text": "GROSS PROFIT",
+   "reason": "the gross margin line should be called gross profit"
+  }
+ ],
+ "not_possible": []
+}

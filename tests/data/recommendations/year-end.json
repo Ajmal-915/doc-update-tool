@@ -1,0 +1,104 @@
+{
+  "pack": "../year-end-test-pack",
+  "note": "Plain-words recommendations for the year-end test pack. expected: updated | manual_review (with reason_code).",
+  "recommendations": [
+    {
+      "id": "R01",
+      "file": "report_original.pdf",
+      "page": 4,
+      "text": "In the income statement, the gross margin line should be called gross profit.",
+      "expected": "updated"
+    },
+    {
+      "id": "R02",
+      "file": "report_original.pdf",
+      "page": 4,
+      "text": "Shorten the Sales and Marketing expense line to just Marketing, and rename Other Income, Net to Other Operating Income, Net.",
+      "expected": "updated"
+    },
+    {
+      "id": "R03",
+      "file": "report_original.pdf",
+      "page": 4,
+      "text": "Under Cost of Sales, rename the Product line to Goods. Leave the Product line under Net Sales as it is.",
+      "expected": "updated"
+    },
+    {
+      "id": "R04",
+      "file": "report_original.pdf",
+      "page": 4,
+      "text": "Add the abbreviation to the in-process research line: In-Process Research and Development (R&D).",
+      "expected": "manual_review",
+      "reason_code": "missing_glyphs"
+    },
+    {
+      "id": "R05",
+      "file": "report_original.pdf",
+      "page": 7,
+      "text": "In the disclaimer, say entirely at your own risk instead of strictly at your own risk, and refer to us as Northwind Group instead of Smartsheet.",
+      "expected": "updated"
+    },
+    {
+      "id": "R06",
+      "file": "report_original.pdf",
+      "page": 7,
+      "text": "Remove the green Try Smartsheet for FREE button at the top.",
+      "expected": "manual_review",
+      "reason_code": "not_possible"
+    },
+    {
+      "id": "R07",
+      "file": "report_original.pdf",
+      "page": 3,
+      "text": "Fix the typo at the start of the executive summary text: it should read In its first year.",
+      "expected": "updated"
+    },
+    {
+      "id": "R08",
+      "file": "report_original.pdf",
+      "page": 1,
+      "text": "Fill in our company name, NORTHWIND GROUP, where the cover says COMPANY NAME.",
+      "expected": "updated"
+    },
+    {
+      "id": "R09",
+      "file": "report_original.pdf",
+      "page": 4,
+      "text": "Rename the gross margin line to gross profit and print the column headers in blue.",
+      "expected": "manual_review",
+      "reason_code": "partly_not_possible"
+    },
+    {
+      "id": "R10",
+      "file": "report_original.pdf",
+      "page": 4,
+      "text": "Make the income statement labels clearer for readers.",
+      "expected": "manual_review",
+      "reason_code": "needs_clarification"
+    },
+    {
+      "id": "R11",
+      "file": "report_scanned_p7.pdf",
+      "page": 7,
+      "text": "Say entirely at your own risk instead of strictly at your own risk.",
+      "expected": "manual_review",
+      "reason_code": "scanned_page"
+    },
+    {
+      "id": "R12",
+      "file": "report_original.pdf",
+      "page": 6,
+      "text": "In the summary of significant accounting policies, drop the word monthly from the projected cash flows sentence.",
+      "expected": "manual_review",
+      "reason_code": "needs_clarification",
+      "note": "the section and the cash-flow sentence named are not on the page: the editor must ask, not guess"
+    },
+    {
+      "id": "R13",
+      "file": "report_original.pdf",
+      "page": 6,
+      "text": "In the references section, drop the word monthly before projected.",
+      "expected": "updated"
+    }
+  ]
+}

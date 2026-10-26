@@ -21,7 +21,7 @@ from pathlib import Path
 from .base import LLMError
 
 ROLE_OF_TOOL = {"report_space_analysis": "vision", "submit_plan": "planner", "submit_script": "coder",
-                "report_visual_review": "visual_review"}
+                "report_visual_review": "visual_review", "submit_edit_plan": "editor"}
 
 
 class AwaitingAnswer(LLMError):

@@ -1,0 +1,14 @@
+{
+ "understanding": "Correct 'It its first year' to 'In its first year' in the executive summary text (form field F1).",
+ "edits": [
+  {
+   "line_ids": [
+    "F1"
+   ],
+   "current_text": "It its first year",
+   "new_text": "In its first year",
+   "reason": "fix the typo"
+  }
+ ],
+ "not_possible": []
+}

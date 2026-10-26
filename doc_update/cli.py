@@ -21,7 +21,7 @@ def _print(result: dict) -> int:
         return 2
     if status in (None, "error"):
         return 1
-    return 0
+    return 0  # also "planned"
 
 
 def _overrides(args) -> dict:
@@ -53,6 +53,14 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--provider", choices=["bedrock", "offline", "replay", "manual"], help="override llm.provider")
     p.add_argument("--replay", help="recorded responses (with --provider replay)")
 
+    p = sub.add_parser("recommend", help="carry out a recommendation written in plain words on one page")
+    p.add_argument("--doc-id", required=True)
+    p.add_argument("--page", required=True, type=int, help="page number, from 1")
+    p.add_argument("--text", required=True, help="the approved recommendation, e.g. \"Rename Gross Margin to Gross Profit\"")
+    p.add_argument("--plan-only", action="store_true", help="only show the verified edit plan; change nothing")
+    p.add_argument("--provider", choices=["bedrock", "offline", "replay", "manual"], help="override llm.provider")
+    p.add_argument("--replay", help="recorded responses (with --provider replay)")
+
     for name in ("approve", "reject"):
         p = sub.add_parser(name, help=f"{name} a pending change")
         p.add_argument("--doc-id", required=True)
@@ -72,6 +80,8 @@ def main(argv: list[str] | None = None) -> int:
         return _print(api.ingest_document(args.pdf, args.doc_id, args.config, ov))
     if args.command == "update":
         return _print(api.update_document(args.doc_id, args.find, args.replace, args.page, args.config, ov))
+    if args.command == "recommend":
+        return _print(api.recommend_change(args.doc_id, args.page, args.text, args.config, ov, plan_only=args.plan_only))
     if args.command == "approve":
         return _print(api.approve_change(args.doc_id, args.change, args.by, args.note, args.config, ov))
     if args.command == "reject":

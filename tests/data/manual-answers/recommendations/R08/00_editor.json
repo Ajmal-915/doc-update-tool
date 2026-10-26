@@ -1,0 +1,14 @@
+{
+ "understanding": "Replace the COMPANY NAME placeholder on the cover (field F1, BUSINESS NAME) with NORTHWIND GROUP.",
+ "edits": [
+  {
+   "line_ids": [
+    "F1"
+   ],
+   "current_text": "COMPANY NAME",
+   "new_text": "NORTHWIND GROUP",
+   "reason": "fill in the company name"
+  }
+ ],
+ "not_possible": []
+}

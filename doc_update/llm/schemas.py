@@ -94,6 +94,42 @@ VISUAL_REVIEW = {
 }
 
 
+EDIT_PLAN = {
+    "name": "submit_edit_plan",
+    "description": "Submit the exact text edits that carry out the recommendation on this page.",
+    "schema": {
+        "type": "object",
+        "properties": {
+            "understanding": {"type": "string",
+                              "description": "one or two sentences: what the recommendation asks for on this page"},
+            "edits": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "line_ids": {"type": "array", "items": {"type": "string"},
+                                     "description": "ids of the lines (L..) or form fields (F..) the current text is on"},
+                        "current_text": {"type": "string",
+                                         "description": "the text to replace, copied exactly from those lines or fields"},
+                        "new_text": {"type": "string", "description": "the text it becomes"},
+                        "reason": {"type": "string", "description": "which part of the recommendation this carries out"},
+                    },
+                    "required": ["line_ids", "current_text", "new_text", "reason"],
+                },
+            },
+            "not_possible": {
+                "type": "array",
+                "items": {"type": "object", "properties": {"description": {"type": "string"}, "reason": {"type": "string"}},
+                          "required": ["description", "reason"]},
+            },
+            "needs_clarification": {"type": "string",
+                                    "description": "only when the recommendation cannot be applied without asking"},
+        },
+        "required": ["understanding", "edits", "not_possible"],
+    },
+}
+
+
 def tool_spec(tool: dict) -> dict:
     """Bedrock Converse toolSpec."""
     return {"toolSpec": {"name": tool["name"], "description": tool["description"], "inputSchema": {"json": tool["schema"]}}}

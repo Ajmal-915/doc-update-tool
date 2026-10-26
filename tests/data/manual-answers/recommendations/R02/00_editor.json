@@ -1,0 +1,22 @@
+{
+ "understanding": "Two label changes in the operating expenses and other income part of the table.",
+ "edits": [
+  {
+   "line_ids": [
+    "L15"
+   ],
+   "current_text": "Sales and Marketing",
+   "new_text": "Marketing",
+   "reason": "shorten the Sales and Marketing line to Marketing"
+  },
+  {
+   "line_ids": [
+    "L22"
+   ],
+   "current_text": "Other Income, Net",
+   "new_text": "Other Operating Income, Net",
+   "reason": "rename Other Income, Net"
+  }
+ ],
+ "not_possible": []
+}

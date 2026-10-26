@@ -1,0 +1,14 @@
+{
+ "understanding": "Append the abbreviation (R&D) to the In-Process Research and Development line.",
+ "edits": [
+  {
+   "line_ids": [
+    "L18"
+   ],
+   "current_text": "In-Process Research and Development",
+   "new_text": "In-Process Research and Development (R&D)",
+   "reason": "add the abbreviation"
+  }
+ ],
+ "not_possible": []
+}

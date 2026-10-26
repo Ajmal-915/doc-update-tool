@@ -1,0 +1,19 @@
+{
+ "understanding": "Rename GROSS MARGIN to GROSS PROFIT and colour the column headers blue.",
+ "edits": [
+  {
+   "line_ids": [
+    "L12"
+   ],
+   "current_text": "GROSS MARGIN",
+   "new_text": "GROSS PROFIT",
+   "reason": "rename the gross margin line"
+  }
+ ],
+ "not_possible": [
+  {
+   "description": "print the column headers ([CURRENT YEAR], [1 YEAR PRIOR], [2 YEARS PRIOR]) in blue",
+   "reason": "a colour change, not a replacement of text"
+  }
+ ]
+}

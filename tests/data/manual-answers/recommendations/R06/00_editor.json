@@ -1,0 +1,10 @@
+{
+ "understanding": "Remove the green 'Try Smartsheet for FREE' button in the top right corner.",
+ "edits": [],
+ "not_possible": [
+  {
+   "description": "remove the green 'Try Smartsheet for FREE' button",
+   "reason": "the button is an image, not text on the page; removing it is a layout change"
+  }
+ ]
+}

@@ -69,7 +69,7 @@ def prompt_hash(request: dict) -> str:
 
 
 class LLM(ABC):
-    """The four roles the pipeline needs."""
+    """The roles the pipeline needs (plan_edits only for recommendations)."""
 
     provider = "abstract"
 
@@ -88,6 +88,10 @@ class LLM(ABC):
 
     @abstractmethod
     def review_visual(self, context: dict, before_png: bytes, after_png: bytes) -> dict: ...
+
+    @abstractmethod
+    def plan_edits(self, context: dict, image_png: bytes, image_info: dict) -> dict:
+        """A recommendation for one page -> exact text edits (see schemas.EDIT_PLAN)."""
 
     def models(self) -> dict:
         return {}

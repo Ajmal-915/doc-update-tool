@@ -20,13 +20,14 @@ DEFAULTS: dict = {
         "methods": ["original_box", "horizontal_expansion", "reduced_font", "paragraph_reflow", "form_field_update"],
     },
     "checks": {"render_dpi": 150, "pixel_margin": 2},
+    "recommend": {"max_edits": 10},
     "llm": {
         "provider": "bedrock", "region": None, "vision_model": "auto", "planner_model": "auto", "coder_model": "auto",
         "auto_model_family": "claude-sonnet-5-5", "temperature": 0, "max_tokens": 8000, "tool_choice": "auto",
         "max_calls_per_change": 12, "max_cost_per_change_usd": 1.0,
         "prices_per_million_tokens": {"default": {"input": 2.0, "output": 10.0}},
         "timeout_seconds": 180, "visual_check": True, "visual_review": True, "replay_file": None, "record_dir": None,
-        "manual_dir": None, "manual_session": None,
+        "manual_dir": None, "manual_session": None, "editor_provider": None,
     },
     "sandbox": {"kind": "local", "python": None, "lib_dir": None, "timeout_seconds": 60, "memory_mb": 1536},
 }

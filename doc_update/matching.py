@@ -211,6 +211,11 @@ def _marks(text: str) -> list[str]:
     return [c for c in unicodedata.normalize("NFD", normalize(text)) if unicodedata.combining(c)]
 
 
+def exact_wording(source: str, text: str) -> bool:
+    """The same words, numbers and accents; only spacing, punctuation and capitals may differ."""
+    return _alnum(source) == _alnum(text) and _marks(source) == _marks(text) and coverage_problem(source, text) is None
+
+
 def coverage_problem(source: str, text: str) -> str | None:
     """Why ``text`` (found in the PDF) is not the same wording as ``source``, or None.
 

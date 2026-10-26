@@ -1,7 +1,15 @@
 # Document Update Tool
 
-Turns an approved compliance recommendation ("replace this wording on page N
-with that wording") into a **safe, reviewable change inside the uploaded PDF**.
+Turns an approved compliance recommendation into a **safe, reviewable change
+inside the uploaded PDF**. Two ways to ask for it:
+
+* **A recommendation in plain words for one page** ("On page 4, the gross margin
+  line should be called gross profit"). The page is rendered, and an LLM turns the
+  recommendation into exact edits from the screenshot and the page's text; code
+  verifies every edit against the page before anything changes (see
+  [Recommendations in plain words](#recommendations-in-plain-words)).
+* **Exact find / replace text** with a page number, when you already know the
+  wording.
 
 * An LLM on **Amazon Bedrock** (Converse API, called with your Bedrock API key)
   checks the layout, chooses an update method and writes a short Python script
@@ -64,6 +72,51 @@ When a change is approved, the candidate becomes the next version
 
 Every LLM prompt puts PDF text inside a `<document_data>` block, JSON-encoded,
 and says it is untrusted data, never instructions.
+
+---
+
+## Recommendations in plain words
+
+`recommend` takes a page number and the recommendation as written, e.g. *"In the
+income statement, the gross margin line should be called gross profit"* or *"In
+the disclaimer, say entirely at your own risk instead of strictly, and refer to
+us as Northwind Group instead of Smartsheet"*.
+
+1. **Screenshot and text (code).** The page is rendered at 150 dpi, and its text
+   is listed as numbered lines (L1, L2, … in reading order, with their position in
+   the image), together with its filled form fields (F1, …).
+2. **Edit plan (LLM, "editor" role).** The model gets the screenshot, the listing
+   and the recommendation. It returns:
+   - one edit per change: the exact current text copied from the listing, the new
+     text in the document's own style (capitals, number and date formats), and
+     the lines it is on;
+   - anything it cannot do (images, colours, layout, new paragraphs, other pages);
+   - a question, when the recommendation is not clear.
+3. **Plan check (code).**
+   - Every quoted text must be on the page word for word (only spacing,
+     punctuation and capitals may differ), so an invented or misread quote stops
+     the change.
+   - Text that appears more than once must be singled out by the cited line;
+     identical lines are told apart by their position.
+   - Each edit is narrowed to the words that change, e.g. "GROSS MARGIN" →
+     "GROSS PROFIT" becomes "MARGIN" → "PROFIT", plus context only when needed to
+     make it unique.
+   - Edits may not overlap.
+4. **Edits (steps 1–10 above).** Each edit runs through the normal pipeline on
+   the previous edit's output. All edits become **one candidate** and one
+   approval. If any edit cannot be made safely, nothing is changed and the
+   report says which edit and why.
+
+The result is `updated` (one candidate with every edit), or `manual_review`. The
+reasons for manual review are:
+- `needs_clarification`: the model asks what is meant;
+- `not_possible` / `partly_not_possible`: not, or not only, text replacements;
+- `plan_rejected`: a quote does not match the page;
+- the reason of the first edit that cannot be made safely.
+
+`--plan-only` returns the verified plan without changing anything. Without a
+Bedrock key, the offline stand-in understands only plain instructions ("change X
+to Y", "replace 'X' with 'Y'", several of them separated by `;`, "throughout").
 
 ---
 
@@ -166,6 +219,16 @@ holds a complete set for the year-end pack:
 python -m doc_update.scenarios --pack "tests\data\year-end-test-pack" --provider manual --manual-dir "tests\data\manual-answers\year-end"
 ```
 
+Recommendations in plain words (13 for the year-end pack, in
+`tests\data\recommendations\year-end.json`). The edit plans written by hand,
+with the other roles offline, are in `tests\data\manual-answers\recommendations`.
+With your key, `--provider bedrock` alone runs everything through Bedrock:
+
+```powershell
+python -m doc_update.recommend_pack --pack "tests\data\recommendations\year-end.json" --provider offline --editor-provider manual --manual-dir "tests\data\manual-answers\recommendations"
+python -m doc_update.recommend_pack --pack "tests\data\recommendations\year-end.json" --provider bedrock
+```
+
 Corpus test on any folder of PDFs (your own documents, or a downloaded collection).
 For each PDF it generates a few dozen change requests: letter and digit swaps,
 reversed phrases and lines, shorter and longer wording, two-line targets, fuzzy
@@ -200,6 +263,11 @@ python -m doc_update update --doc-id example-report --page 1 `
 # (add --provider offline to try it without Bedrock)
 
 # look at docs\example-report\pending\<change_id>\report.json and images\before.png, after.png, difference.png
+
+# or: a recommendation in plain words for one page
+python -m doc_update recommend --doc-id example-report --page 1 `
+    --text "The year end is now 31 December 2024, and complaints must be resolved within six weeks."
+python -m doc_update recommend --doc-id example-report --page 1 --plan-only --text "..."   # only show the plan
 python -m doc_update status  --doc-id example-report
 python -m doc_update approve --doc-id example-report --change <change_id> --by "Your Name"
 # or
@@ -211,7 +279,8 @@ Exit codes: `0` done, `2` manual review needed, `1` error.
 ### From your application
 
 ```python
-from doc_update import ingest_document, update_document, approve_change, reject_change, document_status
+from doc_update import (ingest_document, update_document, recommend_change, approve_change, reject_change,
+                        document_status)
 
 ingest_document(r"C:\path\policy.pdf", "policy-2024")
 result = update_document("policy-2024", find="31 December 2023", replace="31 December 2024", page=3)
@@ -220,10 +289,14 @@ if result["status"] == "updated":
     approve_change("policy-2024", result["change_id"], approver="J. Smith")
 else:
     print(result["reason_code"], result["reason"])
+
+# a recommendation in plain words: the edits are planned from a screenshot of the page
+result = recommend_change("policy-2024", page=4, recommendation="Rename Gross Margin to Gross Profit")
+# result["edits"] lists every verified edit (find, replace, method); one candidate, one approval
 ```
 
-Each function returns a dict (`status` is `ingested`, `updated`, `manual_review`,
-`approved`, `rejected`, `ok` or `error`).
+Each function returns a dict (`status` is `ingested`, `updated`, `planned`,
+`manual_review`, `approved`, `rejected`, `ok` or `error`).
 
 ---
 
@@ -256,7 +329,9 @@ lock files).
 `llm.max_cost_per_change_usd` (1.00), `llm.prices_per_million_tokens` (set to
 your Bedrock prices — used only for the estimate), `llm.provider`
 (`bedrock`, `offline` = plain-code stand-in, `replay` = recorded responses,
-`manual` = answers written by hand into `llm.manual_dir`),
+`manual` = answers written by hand into `llm.manual_dir`), `llm.editor_provider`
+(optional: another provider for the recommendation edit plan only),
+`recommend.max_edits` (10 edits per page at most),
 `sandbox.timeout_seconds` (60), `sandbox.memory_mb` (1536).
 
 Notes on the current Claude models on Bedrock: Claude Sonnet 5.5 accepts only its
@@ -297,7 +372,8 @@ so a container or virtual-machine implementation can replace it later.
 pdf_ops\            helper library used by generated scripts (content interpreter, fonts,
                     edit engine, methods a-e, forms, reflow)
 doc_update\         pipeline, analysis, matching, measurement, checks, LLM providers,
-                    sandbox, store, CLI and API
+                    sandbox, store, CLI and API; recommend.py: plain-words recommendations
+                    (page listing, edit plan, plan check, multi-edit changes)
 tests\              unit, end-to-end (recorded LLM responses), scenario and live tests;
                     tests\pdfgen.py builds the synthetic PDFs; tests\data\fonts holds
                     Liberation Sans (SIL OFL) used only to build test PDFs

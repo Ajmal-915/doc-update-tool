@@ -1,0 +1,14 @@
+{
+ "understanding": "Remove 'monthly' before 'projected' in the 5. REFERENCES sentence.",
+ "edits": [
+  {
+   "line_ids": [
+    "L4"
+   ],
+   "current_text": "in connection with the monthly projected",
+   "new_text": "in connection with the projected",
+   "reason": "drop the word monthly"
+  }
+ ],
+ "not_possible": []
+}
