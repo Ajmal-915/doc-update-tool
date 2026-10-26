@@ -215,3 +215,27 @@ def test_year_end_recommendations_with_hand_written_edit_plans(tmp_path):
     assert len(rows) == 13
     assert all(r["verdict"] == "PASS" for r in rows), [(r["id"], r["status"], r.get("reason")) for r in rows
                                                        if r["verdict"] != "PASS"]
+
+
+@pytest.mark.scenarios
+@needs_sandbox
+def test_real_world_recommendations_with_hand_written_edit_plans(tmp_path):
+    """38 recommendations on the year-end pack, a page with an instruction aimed at AI models, and third-party PDFs
+    (tests/data/real-world-pdfs, not committed: their rows are skipped when the files are missing)."""
+    import shutil
+    from pathlib import Path
+
+    from doc_update.recommend_pack import run_pack
+
+    data = Path(__file__).parent / "data"
+    answers = tmp_path / "answers"
+    shutil.copytree(data / "manual-answers" / "recommendations-real", answers)
+    rows = run_pack(data / "recommendations" / "real-world.json",
+                    {"llm": {"provider": "offline", "editor_provider": "manual", "manual_dir": str(answers)}},
+                    tmp_path / "work")
+    ran = {r["id"] for r in rows if r["verdict"] != "SKIPPED"}
+    assert {"P01", "P02"} <= ran
+    assert all(r["verdict"] in ("PASS", "SKIPPED") for r in rows), [(r["id"], r["status"], r.get("reason"))
+                                                                    for r in rows if r["verdict"] not in ("PASS", "SKIPPED")]
+    by_id = {r["id"]: r for r in rows}
+    assert [(e["find"], e["replace"]) for e in by_id["P02"]["edits"]] == [("of $25", "of $30")]  # nothing else

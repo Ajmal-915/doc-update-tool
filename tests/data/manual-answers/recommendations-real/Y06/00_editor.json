@@ -1,0 +1,22 @@
+{
+ "understanding": "Rename Net Sales to Turnover in the statement heading and its total line. COST OF SALES is a different line and stays.",
+ "edits": [
+  {
+   "line_ids": [
+    "L4"
+   ],
+   "current_text": "NET SALES",
+   "new_text": "TURNOVER",
+   "reason": "section heading"
+  },
+  {
+   "line_ids": [
+    "L7"
+   ],
+   "current_text": "TOTAL NET SALES",
+   "new_text": "TOTAL TURNOVER",
+   "reason": "total line"
+  }
+ ],
+ "not_possible": []
+}

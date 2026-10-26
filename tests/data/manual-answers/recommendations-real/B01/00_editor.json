@@ -1,0 +1,15 @@
+{
+ "understanding": "In the abstract, 'online payments' becomes 'electronic payments'.",
+ "edits": [
+  {
+   "line_ids": [
+    "L5",
+    "L6"
+   ],
+   "current_text": "would allow online payments",
+   "new_text": "would allow electronic payments",
+   "reason": "electronic instead of online"
+  }
+ ],
+ "not_possible": []
+}

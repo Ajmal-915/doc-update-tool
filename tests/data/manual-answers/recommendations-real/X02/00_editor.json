@@ -1,0 +1,14 @@
+{
+ "understanding": "Change the notice date of the Maxim Integrated Product row with 20 employees (received 07/10/2015). The date cell is L24 (same row as L119, y 852).",
+ "edits": [
+  {
+   "line_ids": [
+    "L24"
+   ],
+   "current_text": "07/01/2015",
+   "new_text": "07/02/2015",
+   "reason": "notice date of that row"
+  }
+ ],
+ "not_possible": []
+}

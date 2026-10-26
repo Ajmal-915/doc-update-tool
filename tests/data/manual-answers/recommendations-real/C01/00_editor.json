@@ -1,0 +1,14 @@
+{
+ "understanding": "The meeting time under the date becomes 7:00 p.m.",
+ "edits": [
+  {
+   "line_ids": [
+    "L20"
+   ],
+   "current_text": "7:30 a.m.",
+   "new_text": "7:00 p.m.",
+   "reason": "meeting time"
+  }
+ ],
+ "not_possible": []
+}

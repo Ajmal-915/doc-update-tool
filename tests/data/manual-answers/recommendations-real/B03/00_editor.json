@@ -1,0 +1,22 @@
+{
+ "understanding": "Write 'double spending' without the hyphen in the abstract (two occurrences, lines L8 and L9). Other occurrences outside the abstract are not changed.",
+ "edits": [
+  {
+   "line_ids": [
+    "L8"
+   ],
+   "current_text": "prevent double-spending.",
+   "new_text": "prevent double spending.",
+   "reason": "abstract, first occurrence"
+  },
+  {
+   "line_ids": [
+    "L9"
+   ],
+   "current_text": "the double-spending problem",
+   "new_text": "the double spending problem",
+   "reason": "abstract, second occurrence"
+  }
+ ],
+ "not_possible": []
+}

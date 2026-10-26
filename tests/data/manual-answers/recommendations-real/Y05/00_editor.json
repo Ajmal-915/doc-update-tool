@@ -1,0 +1,22 @@
+{
+ "understanding": "Rename two signature-block labels on the cover; TITLE and DATE stay.",
+ "edits": [
+  {
+   "line_ids": [
+    "L3"
+   ],
+   "current_text": "PREPARED BY",
+   "new_text": "AUTHOR",
+   "reason": "PREPARED BY becomes AUTHOR"
+  },
+  {
+   "line_ids": [
+    "L6"
+   ],
+   "current_text": "APPROVED BY",
+   "new_text": "REVIEWER",
+   "reason": "APPROVED BY becomes REVIEWER"
+  }
+ ],
+ "not_possible": []
+}

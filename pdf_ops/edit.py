@@ -53,6 +53,7 @@ class Insertion:
     text: str = ""
     word_kern: Decimal = Decimal(0)  # extra text-space advance after each space (fills a justified box)
     char_kern: Decimal = Decimal(0)  # extra text-space advance between two letters (letter spacing)
+    lead: Decimal = Decimal(0)  # text-space advance before the first glyph (re-centres a shorter line)
 
 
 @dataclass
@@ -360,6 +361,8 @@ class _FlowRewriter:
                             out_ops.append(pikepdf.ContentStreamInstruction(
                                 [pikepdf.Name("/" + st.font_res), _num_obj(new_size)], pikepdf.Operator("Tf")))
                         pen = Decimal(0)
+                        if ins_.lead:
+                            pen += emit_kern(ins_.lead * th, new_size)
                         last = len(ins_.codes) - 1
                         for ci, c in enumerate(ins_.codes):
                             if c is None:

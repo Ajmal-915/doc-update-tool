@@ -1,0 +1,14 @@
+{
+ "understanding": "Change the wording of the auditor's report placeholder.",
+ "edits": [
+  {
+   "line_ids": [
+    "F1"
+   ],
+   "current_text": "an accountant or auditor's report",
+   "new_text": "an independent auditor's report",
+   "reason": "independent auditor's report"
+  }
+ ],
+ "not_possible": []
+}

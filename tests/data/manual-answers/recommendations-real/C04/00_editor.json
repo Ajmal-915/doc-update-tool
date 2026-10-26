@@ -1,0 +1,22 @@
+{
+ "understanding": "The per-speaker limit becomes two minutes in both places (welcome paragraph L3 and public comment item L27). The 30-minute total in L31 is a different limit and stays.",
+ "edits": [
+  {
+   "line_ids": [
+    "L3"
+   ],
+   "current_text": "limited to three (3) minutes",
+   "new_text": "limited to two (2) minutes",
+   "reason": "welcome paragraph"
+  },
+  {
+   "line_ids": [
+    "L27"
+   ],
+   "current_text": "allotted three (3) minutes",
+   "new_text": "allotted two (2) minutes",
+   "reason": "public comment item"
+  }
+ ],
+ "not_possible": []
+}

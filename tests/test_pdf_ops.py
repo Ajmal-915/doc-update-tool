@@ -263,6 +263,60 @@ def test_reflow_refused_for_mixed_fonts(pdfs):
     assert not fit.feasible and "mixes fonts" in fit.reason
 
 
+def test_reflow_refused_when_the_paragraph_has_glyphs_missing_from_the_subset(tmp_path):
+    b = Builder()
+    f1 = b.font_truetype("F1", "ate pymnsicurfo$0123456789.")  # no 'L': the PDF shows .notdef for it
+    b.page(single_line(f1, "Late payments incur a fee of $25.", 72, 700, 11), b.resources([f1]))
+    doc = pdf_ops.open(b.save(tmp_path / "subset.pdf"))
+    t = pdf_ops.find_target(doc, 1, "$25")
+    fit = pdf_ops.fit_reflow(doc, t, "$30")
+    assert not fit.feasible and "cannot be rewritten in its font" in fit.reason
+    assert pdf_ops.fit_in_place(doc, t, "$30").feasible
+
+
+@pytest.mark.parametrize("align", ["center", "right", "left"])
+def test_a_shorter_line_keeps_its_alignment(tmp_path, align):
+    import pypdfium2 as pdfium
+
+    lines = ["New York University", "715 Broadway, 7th Floor", "New York, NY 10003"]
+    b = Builder()
+    f1 = b.font_truetype("F1", " ".join(lines) + "60 Fifth Avenue")
+    widths = [f1.width(t, 11) for t in lines]
+    xs = {"center": [300 - w / 2 for w in widths], "right": [400 - w for w in widths], "left": [100] * 3}[align]
+    b.page(b"\n".join(single_line(f1, t, x, 700 - 14 * i, 11) for i, (t, x) in enumerate(zip(lines, xs))),
+           b.resources([f1]))
+    doc = pdf_ops.open(b.save(tmp_path / "block.pdf"))
+    assert doc.layout(0).blocks[0].alignment == align
+    t = pdf_ops.find_target(doc, 1, "715 Broadway, 7th Floor")
+    pdf_ops.replace_in_place(doc, t, "60 Fifth Avenue")
+    pdf_ops.save(doc, tmp_path / "out.pdf")
+    pdf = pdfium.PdfDocument(str(tmp_path / "out.pdf"))
+    tp = pdf[0].get_textpage()
+    start = tp.get_text_range().index("60 Fifth")
+    x0 = tp.get_charbox(start)[0]
+    x1 = tp.get_charbox(start + len("60 Fifth Avenue") - 1)[2]
+    pdf.close()
+    old_x0, old_x1 = xs[1], xs[1] + widths[1]
+    want = {"center": ((old_x0 + old_x1) / 2, (x0 + x1) / 2), "right": (old_x1, x1), "left": (old_x0, x0)}[align]
+    assert abs(want[0] - want[1]) < 1.0, (align, x0, x1, old_x0, old_x1)
+
+
+def test_a_shorter_word_in_a_justified_line_keeps_the_right_edge(pdfs, work):
+    doc = pdf_ops.open(pdfs["justified"])
+    t = pdf_ops.find_target(doc, 1, "Managers review")
+    right = doc.layout(0).blocks[t.block].right
+    fit = pdf_ops.fit_horizontal(doc, t, "Managers check", right)
+    assert fit.feasible and fit.parts[0].after_shift  # the shortfall is spread over the gaps that follow
+    spec = ek.spec_for(doc, t, "horizontal_expansion", "Managers check", {"boundary": right})
+    pdf_ops.expand_horizontal(doc, t, "Managers check", right)
+    pdf_ops.save(doc, work / "j.pdf")
+    line = next(ln for ln in pdf_ops.open(work / "j.pdf").layout(0).lines if ln.text.startswith("Managers check"))
+    assert line.text == "Managers check access rights every quarter and record exceptions in the risk"
+    assert abs(line.x1 - right) < 0.05
+    report = run_checks(pdfs["justified"], work / "j.pdf", spec)
+    assert report.passed, report.summary()
+
+
 def test_reflow_justified_lines_end_at_right_edge(pdfs, work):
     doc = pdf_ops.open(pdfs["justified"])
     t = pdf_ops.find_target(doc, 1, "within 30 days of joining")

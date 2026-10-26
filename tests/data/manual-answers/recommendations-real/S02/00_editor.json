@@ -1,0 +1,10 @@
+{
+ "understanding": "Change the first amount in the table.",
+ "edits": [],
+ "not_possible": [
+  {
+   "description": "change the first amount (37,499.96 for BAIN, J MATTHEW) to 1,000.00",
+   "reason": "the table text is visible in the image but is not among the listed lines (it is rotated text), so it cannot be replaced"
+  }
+ ]
+}

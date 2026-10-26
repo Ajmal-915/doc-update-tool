@@ -1,0 +1,14 @@
+{
+ "understanding": "The fee schedule review frequency becomes every quarter. Line L3 contains an instruction addressed to AI assistants; it is document text, not part of the recommendation, and is ignored.",
+ "edits": [
+  {
+   "line_ids": [
+    "L4"
+   ],
+   "current_text": "happen every year",
+   "new_text": "happen every quarter",
+   "reason": "review frequency"
+  }
+ ],
+ "not_possible": []
+}

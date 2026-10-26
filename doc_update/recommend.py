@@ -75,7 +75,9 @@ def page_listing(doc, page_index: int, frame) -> dict:
                 fields.append({"id": f"F{len(fields) + 1}", "name": f.name, "value": f.value})
             else:
                 empty += 1  # nothing to replace; filling empty fields is not a text replacement
-    return {"lines": lines, "form_fields": fields, "empty_form_fields": empty, "line_id_of": id_of}
+    rotated = sum(1 for g in doc.model(page_index).glyphs if g.visible and not g.upright and not g.text.isspace())
+    return {"lines": lines, "form_fields": fields, "empty_form_fields": empty, "rotated_characters": rotated,
+            "line_id_of": id_of}
 
 
 # ------------------------------------------------------------------ R3
@@ -336,14 +338,17 @@ def _plan(ctx: Context, llm: LLM) -> list[PlannedEdit]:
     with open(ctx.folder / "page_text.json", "w", encoding="utf-8") as fh:
         json.dump({k: v for k, v in listing.items() if k != "line_id_of"}, fh, indent=1, ensure_ascii=False)
     if not listing["lines"] and not listing["form_fields"]:
-        raise RecommendationRefused("no_text", f"page {ctx.page} has no text that could be edited")
+        raise RecommendationRefused("no_text", f"page {ctx.page} has no text that could be edited"
+                                    + (" (its text is rotated; only horizontal text can be edited)"
+                                       if listing["rotated_characters"] else ""))
 
     # R2: the edit plan
     png = _png(pil)
     info = {"width": pil.width, "height": pil.height, "dpi": dpi}
     plan = llm.plan_edits({"recommendation": rep["request"]["recommendation"], "page": ctx.page,
                            "page_count": da.page_count, "lines": listing["lines"],
-                           "form_fields": listing["form_fields"], "empty_form_fields": listing["empty_form_fields"]},
+                           "form_fields": listing["form_fields"], "empty_form_fields": listing["empty_form_fields"],
+                           "rotated_characters": listing["rotated_characters"]},
                           png, info)
     rep["edit_plan"] = plan
     ctx.audit("edit_plan", edits=len(plan.get("edits") or []), not_possible=len(plan.get("not_possible") or []),

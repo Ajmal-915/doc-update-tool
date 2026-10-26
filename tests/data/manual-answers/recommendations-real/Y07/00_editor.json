@@ -1,0 +1,10 @@
+{
+ "understanding": "Delete a whole row of the income statement.",
+ "edits": [],
+ "not_possible": [
+  {
+   "description": "remove the Amortization of Purchased Intangible Assets row (L17)",
+   "reason": "deleting a table row changes the table layout; it is not a text replacement"
+  }
+ ]
+}

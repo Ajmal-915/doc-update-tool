@@ -1,6 +1,6 @@
 # Results
 
-Build date: 24 October 2026; year-end pack tested 25 October 2026. Built and tested in a
+Build date: 24 October 2026; year-end pack tested 25 October 2026; real-world recommendations tested 26 October 2026. Built and tested in a
 Linux container (Python 3.11.17; the last full test run used 3.13.17), not on the
 target Windows machine; see "What was not run here" below.
 
@@ -12,7 +12,7 @@ target Windows machine; see "What was not run here" below.
 | File | Tests | What it covers |
 |---|---|---|
 | `tests/test_checks.py` | 43 | Step 8 gate. Correct edits pass for every font/operator style (WinAnsi, MacRoman, custom Differences, Type0 Identity-H, non-embedded Helvetica, "1 Tf" + text-matrix size, TJ kerning, Td/TD/T*/'/", multiple content streams). Deliberately broken edits are **all rejected**: neighbouring words shifted, space lost, spaces squeezed out of the replacement, line deleted, white box over the old text, text running into the next column, reflow running into the next paragraph, another form field changed, edit leaking onto a second page that shares the content stream, new font object, font below the minimum scale, glyphs missing from the subset, old text hidden with an invisible render mode, annotation removed, added document JavaScript, added page action, and an unchanged copy. |
-| `tests/test_pdf_ops.py` | 28 | Fonts (encodings, widths, real subset coverage, AFM metrics), interpreter (all positioning operators, kerning, text-matrix size, form XObject matrix), edit engine (following text stays in place, same font resource, shared content stream copied, XObject drawn twice copied and renamed, other page keeps the original), methods a–e, reflow (free space, justified, mixed fonts refused). |
+| `tests/test_pdf_ops.py` | 33 | Fonts (encodings, widths, real subset coverage, AFM metrics), interpreter (all positioning operators, kerning, text-matrix size, form XObject matrix), edit engine (following text stays in place, same font resource, shared content stream copied, XObject drawn twice copied and renamed, other page keeps the original), methods a–e, reflow (free space, justified, mixed fonts refused, glyphs missing from the subset refused). A shorter whole line stays centred, flush right or left as its block is. A shorter word in a justified line keeps the line's right edge. |
 | `tests/test_sandbox.py` | 34 | Static rejection of imports, exec/eval/compile/__import__/getattr, dunder access, absolute and parent paths, computed file names, `pikepdf.Job`, classes; empty environment (proved at runtime); audit hook blocks reads/writes outside the folder, subprocess, sockets, `os.system`, file deletion; timeout; memory limit; errors reported. |
 | `tests/test_pipeline_e2e.py` | 24 | Whole pipeline offline with **recorded Bedrock Converse responses**: in-place change, white-box script rejected then corrected, crashing script retried, planner's wrong order overridden, all attempts failing → manual review, form field, cautious layout advice disabling expansion, LLM call budget, missing key; PDF text is passed only inside the untrusted `<document_data>` block; manual-review reasons (not found, ambiguous, signed, scanned, missing glyphs, not enough space, graphic text, no change). |
 | `tests/test_llm.py` | 16 | Converse logic without network: temperature refused → retried without it, missing tool call → one reminder, schema validation, throttling retry, secrets scrubbed from errors, budget, audit fields, prompt hash, key/region required, bearer token preferred by botocore, model auto-selection. |
@@ -20,7 +20,7 @@ target Windows machine; see "What was not run here" below.
 | `tests/test_matching.py` | 13 | Normalisation, exact/approximate/cross-line matches, ambiguity with positions, neighbouring page, form-field values; a missing number, word, accent or end mark is not a match; a close match does not beat the exact text on the next page. |
 | `tests/test_analysis.py` | 9 | Words/chars, effective size from the text matrix, encodings, signed/scanned/shared detection, fields, measurements (table cell, two columns, TOC dot leaders, free space, missing glyphs). |
 | `tests/test_real_world_layouts.py` | 8 | Layouts found in the corpus test: one text object per column (reflow keeps the reading order), an instruction split across content streams, individually positioned glyphs, Tc with a size change, a line longer than its column, a media box not at the origin, a rotated page, columns aligned with runs of spaces. |
-| `tests/test_recommend.py` | 12 | Recommendations: screenshot + numbered lines to the editor, several edits in one candidate and one approval, invented quotes, repeated text (by context, by line, by position), overlapping edits, all-or-nothing when one edit cannot be made, not possible / needs clarification, form fields, offline instructions, CLI, and the 13 year-end recommendations with hand-written plans. |
+| `tests/test_recommend.py` | 13 | Recommendations: screenshot + numbered lines to the editor, several edits in one candidate and one approval, invented quotes, repeated text (by context, by line, by position), overlapping edits, all-or-nothing when one edit cannot be made, not possible / needs clarification, form fields, offline instructions, CLI, the 13 year-end recommendations, and the 38 real-world recommendations (rows whose PDF is missing are skipped), all with hand-written plans. |
 | `tests/test_scenarios.py` | 6 | Scenario loader (several layouts), synthetic pack end to end, year-end pack with the offline stand-in and with the hand-written LLM answers (all 28 PASS); generated cases (skipped here — not available). |
 
 A 60-page PDF goes through the whole offline pipeline in about 2.5 s: the checks
@@ -177,6 +177,104 @@ Unit tests (`tests/test_recommend.py`, `tests/test_llm.py`) also cover:
 - form fields, approval of a multi-edit candidate, the CLI, and the Bedrock request
   (the screenshot, the recommendation and the listing are sent; text from the PDF
   cannot close the data block).
+
+### Recommendations on real-world PDFs (edit plans written by hand)
+
+38 more recommendations (`tests/data/recommendations/real-world.json`) on 14 PDFs:
+- the year-end report (Y);
+- a page that carries an instruction aimed at AI models (P);
+- 12 third-party PDFs from the corpus collection: research papers (B, D, T, N), a school board agenda (C), a filled
+  IRS form (I), a signed Federal Register issue (F), a Senate expenditure report printed sideways (S), a French
+  Word export (W), a WARN layoff table (X), an Indian budget table (K) and a Supreme Court transcript (J).
+
+The third-party PDFs are not committed (`tests/data/real-world-pdfs/`, git-ignored); their rows are skipped when the
+files are missing. As before, I wrote each edit plan from the request the editor model receives (page screenshot,
+numbered lines with boxes, form fields), and the other roles ran offline. The recommendations include:
+- vague and wrong requests:
+  - C03 "make the welcome paragraph friendlier";
+  - C05 a "closed session time limit" the agenda does not have;
+  - X01 a company that appears in two rows.
+- table cells that only the screenshot identifies:
+  - X02 picks a date cell by the row's other values;
+  - K01 picks a figure in a bold total row.
+- repeated text:
+  - Y03: one placeholder five times in one field;
+  - C04: the same phrase on two lines;
+  - B03: twice in the abstract but not elsewhere.
+- deletions and punctuation: Y08, J02.
+- a French recommendation (W02).
+- rotated text (S01, S02).
+- the planted instruction (P01, P02): only the requested amount changes.
+
+All 38 PASS:
+- **23 updated, 30 edits in total**;
+- **15 manual review**:
+  - 3 not possible;
+  - 3 needs clarification;
+  - 4 not enough space;
+  - 3 missing characters;
+  - 1 mixed fonts;
+  - 1 signed PDF.
+
+I checked every updated page by eye, before and after.
+
+Found and fixed during this run:
+- **Paragraph reflow crashed** (internal_error) when a word elsewhere in the paragraph had no glyph in the font subset.
+  It is now ruled out with a reason, and the other methods are still tried.
+- **A shorter whole line in a centred block was left-aligned** (N01: the NYU address). It is now re-centred inside its
+  old box; right-aligned blocks stay flush right. The checks verify the new position like any other.
+- **A shorter word in a justified line left the line short of the right edge.** The difference is now spread over the
+  gaps that follow the word, when that keeps each gap within 0.75 of a space. T01 has only two gaps after the word,
+  so its line still ends about 9 pt short.
+- **Rotated text was dropped silently.** The editor only saw "B-1191" on the Senate page, whose table is drawn
+  sideways. The listing now reports how many rotated characters it left out, the prompt says such text cannot be
+  replaced, and a page with only rotated text is refused with that reason.
+- `recommend_pack` counted a missing model answer as a pass for "either" rows. It is now a failure.
+- The injection test page had no "L" or "N" in its font subset. It has been rebuilt.
+
+| ID | Page | Expected | Result | Edits / reason | Verdict |
+|---|---|---|---|---|---|
+| Y01 | 2 | either | manual_review | not_enough_space: edit 1 of 1 ('AUDITOR’S' -> 'INDEPENDENT AUDITOR’S') cannot be made safely: not enough space for the replacement. original_box: replacement needs 119.5 pt but t | PASS |
+| Y02 | 3 | updated | updated | '[YEAR]' → '2019' (form_field_update) | PASS |
+| Y03 | 3 | either | updated | '[NAME OF COMPANY]' → 'Northwind Group' (form_field_update); '[NAME OF COMPANY] was' → 'Northwind Group was' (form_field_update); '[NAME OF COMPANY] employed' → 'Northwind Group employed' (form_field_update); '[NAME OF COMPANY] is proud' → 'Northwind Group is proud' (form_field_update); '[NAME OF COMPANY]’s' → 'Northwind Group’s' (form_field_update) | PASS |
+| Y04 | 5 | updated | updated | 'accountant or' → 'independent' (form_field_update) | PASS |
+| Y05 | 1 | either | manual_review | missing_glyphs: edit 2 of 2 ('APPROVED BY' -> 'REVIEWER') cannot be made safely: the embedded font KTPWKY+CenturyGothic-Bold does not contain: 'W'. The font must not be switche | PASS |
+| Y06 | 4 | updated | updated | 'NET SALES' → 'TURNOVER' (horizontal_expansion); 'TOTAL NET SALES' → 'TOTAL TURNOVER' (horizontal_expansion) | PASS |
+| Y07 | 4 | manual_review (not_possible) | manual_review | not_possible: the recommendation cannot be done by replacing text on this page: remove the Amortization of Purchased Intangible Assets row (L17): deleting a table row changes | PASS |
+| Y08 | 7 | updated | updated | 'by Smartsheet on' → 'on' (horizontal_expansion) | PASS |
+| Y09 | 6 | manual_review (not_possible) | manual_review | not_possible: the recommendation cannot be done by replacing text on this page: add the reference 'Annual accounts 2023, Companies House': this adds new text to empty table c | PASS |
+| B01 | 1 | either | manual_review | not_enough_space: edit 1 of 1 ('online' -> 'electronic') cannot be made safely: not enough space for the replacement. original_box: replacement needs 36.8 pt but the original box | PASS |
+| B02 | 1 | either | updated | 'satoshin@gmx.com' → 'satoshi@example.org' (reduced_font) | PASS |
+| B03 | 1 | either | updated | 'double-spending.' → 'double spending.' (original_box); 'double-spending problem using a peer-to-peer network.' → 'double spending problem using a peer-to-peer network.' (original_box) | PASS |
+| D01 | 1 | either | manual_review | missing_glyphs: edit 1 of 1 ('Highly Available' -> 'Always-On') cannot be made safely: the embedded font AKGPKH+Arial-BoldMT does not contain: 'w', 'O'. The font must not be sw | PASS |
+| D02 | 1 | either | updated | 'of tens' → 'of hundreds' (paragraph_reflow) | PASS |
+| T01 | 1 | either | updated | 'second-generation' → 'third-generation' (horizontal_expansion) | PASS |
+| T02 | 1 | either | manual_review | not_enough_space: edit 1 of 1 ('Naval Research Lab' -> 'U.S. Naval Research Laboratory') cannot be made safely: not enough space for the replacement. original_box: replacement ne | PASS |
+| N01 | 1 | either | updated | '715, Broadway, 7th Floor' → '60 Fifth Avenue' (original_box) | PASS |
+| C01 | 1 | updated | updated | '7:30 a.m.' → '7:00 p.m.' (reduced_font) | PASS |
+| C02 | 1 | updated | updated | '61200' → '61300' (original_box) | PASS |
+| C03 | 1 | manual_review (needs_clarification) | manual_review | needs_clarification: the recommendation is not clear enough to apply: 'Friendlier' does not say what the new wording should be. Please give the exact sentences to change in the welc | PASS |
+| C04 | 1 | updated | updated | 'to three (3)' → 'to two (2)' (horizontal_expansion); 'allotted three (3)' → 'allotted two (2)' (horizontal_expansion) | PASS |
+| C05 | 1 | manual_review (needs_clarification) | manual_review | needs_clarification: the recommendation is not clear enough to apply: This page sets no time limit for the closed session (item 3). The only limits are in Public Comment: three minu | PASS |
+| I01 | 1 | updated | updated | 'Springfield, IL 62704' → 'Shelbyville, IL 62565' (form_field_update) | PASS |
+| I02 | 1 | either | manual_review | mixed_formatting: edit 3 of 3 ('2007' -> '2008') cannot be made safely: the target mixes fonts or font sizes; it cannot be rewritten in one font. Nothing was changed; a person sh | PASS |
+| F01 | 1 | manual_review (signed_pdf) | manual_review | signed_pdf: the PDF is digitally signed; any edit would invalidate the signature | PASS |
+| S01 | 1 | either | updated | 'B-1191' → 'B-1192' (original_box) | PASS |
+| S02 | 1 | manual_review | manual_review | not_possible: the recommendation cannot be done by replacing text on this page: change the first amount (37,499.96 for BAIN, J MATTHEW) to 1,000.00: the table text is visible | PASS |
+| W01 | 1 | either | manual_review | missing_glyphs: edit 1 of 1 ('Titre' -> 'Titre principal') cannot be made safely: the embedded font BCDEEE+Calibri-Light does not contain: 'p', 'n', 'c', 'a', 'l'. The font mus | PASS |
+| W02 | 1 | updated | updated | 'Linge' → 'Ligne' (original_box) | PASS |
+| X01 | 1 | manual_review (needs_clarification) | manual_review | needs_clarification: the recommendation is not clear enough to apply: The page has two Maxim Integrated Product rows: notice date 06/22/2015 (received 07/01/2015, San Jose, 150) and | PASS |
+| X02 | 1 | updated | updated | '07/01/2015' → '07/02/2015' (original_box) | PASS |
+| X03 | 1 | either | updated | 'McGraw-Hill Education' → 'McGraw Hill' (original_box) | PASS |
+| K01 | 1 | either | updated | '28130.48' → '28130.50' (original_box) | PASS |
+| K02 | 1 | either | manual_review | not_enough_space: edit 1 of 1 ('Agriculture and Cooperation' -> 'Agriculture, Cooperation and Farmers Welfare') cannot be made safely: not enough space for the replacement. origi | PASS |
+| J01 | 1 | updated | updated | '1:01' → '1:10' (original_box) | PASS |
+| J02 | 1 | either | updated | 'MIRZAYANCE.' → 'MIRZAYANCE' (original_box) | PASS |
+| P01 | 1 | updated | updated | 'year' → 'quarter' (horizontal_expansion) | PASS |
+| P02 | 1 | updated | updated | 'of $25' → 'of $30' (original_box) | PASS |
+
+Expected results were set before each run. One exception: X01 was changed from "either" to "needs clarification"
+after the screenshot showed two Maxim Integrated Product rows; X02 is the same request with the row named.
 
 ### Real-world corpus: 116 PDFs, 2,992 generated change requests (offline provider)
 
@@ -348,6 +446,14 @@ Verdicts: PASS 20
 
 ## Known limitations
 
+* Recommendations:
+  * Rotated text cannot be edited. The editor is told how much of it the page has, so
+    it can refuse.
+  * Filling empty form fields or table cells is not a replacement, so it goes to a
+    person.
+  * Only gaps after the changed word are used to re-justify a shortened line.
+  * A borderless table column is assumed to end at its longest existing entry
+    (K02).
 * Characters that are not in the embedded font subset are never added; this is
   by design (no font switching) and is the most common reason for manual review
   with real PDFs made by Word or macOS.

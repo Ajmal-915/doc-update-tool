@@ -1,0 +1,14 @@
+{
+ "understanding": "The Ministry of Agriculture's plan revenue figure (bold total row) becomes 28130.50. The row and column totals (28198.00, 31062.94) are not changed because the recommendation does not ask for it.",
+ "edits": [
+  {
+   "line_ids": [
+    "L21"
+   ],
+   "current_text": "28130.48",
+   "new_text": "28130.50",
+   "reason": "plan revenue figure"
+  }
+ ],
+ "not_possible": []
+}

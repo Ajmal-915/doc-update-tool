@@ -1,0 +1,14 @@
+{
+ "understanding": "Remove the full stop after the respondent's name in the case caption.",
+ "edits": [
+  {
+   "line_ids": [
+    "L37"
+   ],
+   "current_text": "ALEXANDRE MIRZAYANCE.",
+   "new_text": "ALEXANDRE MIRZAYANCE",
+   "reason": "stray full stop"
+  }
+ ],
+ "not_possible": []
+}

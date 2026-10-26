@@ -1,0 +1,14 @@
+{
+ "understanding": "Only the abstract's 'second-generation' becomes 'third-generation'; the title (L1) stays.",
+ "edits": [
+  {
+   "line_ids": [
+    "L13"
+   ],
+   "current_text": "This second-generation Onion Routing",
+   "new_text": "This third-generation Onion Routing",
+   "reason": "abstract only"
+  }
+ ],
+ "not_possible": []
+}

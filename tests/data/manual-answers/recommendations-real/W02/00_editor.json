@@ -1,0 +1,14 @@
+{
+ "understanding": "Fix the typo 'Linge 2' to 'Ligne 2' in the table.",
+ "edits": [
+  {
+   "line_ids": [
+    "L15"
+   ],
+   "current_text": "Linge 2",
+   "new_text": "Ligne 2",
+   "reason": "typo"
+  }
+ ],
+ "not_possible": []
+}

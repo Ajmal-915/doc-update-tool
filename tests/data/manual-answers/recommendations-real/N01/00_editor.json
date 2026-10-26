@@ -1,0 +1,14 @@
+{
+ "understanding": "Replace the street address of New York University in the author block.",
+ "edits": [
+  {
+   "line_ids": [
+    "L5"
+   ],
+   "current_text": "715, Broadway, 7th Floor",
+   "new_text": "60 Fifth Avenue",
+   "reason": "new street address"
+  }
+ ],
+ "not_possible": []
+}

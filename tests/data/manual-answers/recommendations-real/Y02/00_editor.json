@@ -1,0 +1,14 @@
+{
+ "understanding": "Fill in the founding year placeholder in the executive summary.",
+ "edits": [
+  {
+   "line_ids": [
+    "F1"
+   ],
+   "current_text": "was established in [YEAR]",
+   "new_text": "was established in 2019",
+   "reason": "founded in 2019"
+  }
+ ],
+ "not_possible": []
+}

@@ -1,0 +1,14 @@
+{
+ "understanding": "Rename the auditor's report entry in the table of contents.",
+ "edits": [
+  {
+   "line_ids": [
+    "L5"
+   ],
+   "current_text": "3. AUDITOR’S REPORT",
+   "new_text": "3. INDEPENDENT AUDITOR’S REPORT",
+   "reason": "TOC entry in capitals like the others"
+  }
+ ],
+ "not_possible": []
+}

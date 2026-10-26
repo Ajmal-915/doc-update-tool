@@ -1,0 +1,30 @@
+{
+ "understanding": "Change the tax year printed in the form header from 2007 to 2008: the 'For the year' line, the 'beginning ..., 2007' line and the large year at the top right. The footer 'Form 1040NR (2007)' (L154) is not in the header and stays.",
+ "edits": [
+  {
+   "line_ids": [
+    "L4"
+   ],
+   "current_text": "December 31, 2007,",
+   "new_text": "December 31, 2008,",
+   "reason": "For the year line"
+  },
+  {
+   "line_ids": [
+    "L8"
+   ],
+   "current_text": ", 2007, and ending",
+   "new_text": ", 2008, and ending",
+   "reason": "tax year beginning line"
+  },
+  {
+   "line_ids": [
+    "L170"
+   ],
+   "current_text": "2007",
+   "new_text": "2008",
+   "reason": "large year in the header"
+  }
+ ],
+ "not_possible": []
+}

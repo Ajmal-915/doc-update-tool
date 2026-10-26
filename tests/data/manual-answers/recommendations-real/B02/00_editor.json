@@ -1,0 +1,14 @@
+{
+ "understanding": "Replace the author's contact email under the title.",
+ "edits": [
+  {
+   "line_ids": [
+    "L3"
+   ],
+   "current_text": "satoshin@gmx.com",
+   "new_text": "satoshi@example.org",
+   "reason": "new contact email"
+  }
+ ],
+ "not_possible": []
+}

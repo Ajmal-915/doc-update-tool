@@ -1,0 +1,10 @@
+{
+ "understanding": "Add a new entry to the references table.",
+ "edits": [],
+ "not_possible": [
+  {
+   "description": "add the reference 'Annual accounts 2023, Companies House'",
+   "reason": "this adds new text to empty table cells (empty form fields are not listed); it is not a replacement of existing text"
+  }
+ ]
+}

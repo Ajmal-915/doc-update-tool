@@ -1,0 +1,14 @@
+{
+ "understanding": "Rename McGraw-Hill Education in the company column.",
+ "edits": [
+  {
+   "line_ids": [
+    "L245"
+   ],
+   "current_text": "McGraw-Hill Education",
+   "new_text": "McGraw Hill",
+   "reason": "company name"
+  }
+ ],
+ "not_possible": []
+}

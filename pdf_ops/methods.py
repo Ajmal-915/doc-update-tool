@@ -40,6 +40,8 @@ class PartFit:
     after: list = field(default_factory=list)
     word_kern: float = 0.0  # extra text-space advance after each space (fills a justified box exactly)
     char_kern: float = 0.0  # extra text-space advance between letters (the original's letter spacing)
+    lead: float = 0.0  # text-space advance before the first glyph (keeps a centred or right-aligned line so)
+    after_shift: dict = field(default_factory=dict)  # gid -> points, overrides shift_after (re-justified line)
 
 
 @dataclass
@@ -323,8 +325,25 @@ def _fit_fixed_box(doc, target, text, first, font, scale: Decimal, method: str) 
                            "the word spacing would be wrong",
                            font_size=float(first.size), new_font_size=float(size), scale=float(scale))
             pf.width = x1 - x0
+        elif slack > 0.01 and len(geo) == 1:
+            pf.lead = _alignment_lead(doc, target, p, slack) / unit
         parts.append(pf)
     return Fit(method, True, "fits", parts, float(scale), float(first.size), float(size))
+
+
+def _alignment_lead(doc: Document, target: Target, part, slack: float) -> float:
+    """Points to move a shorter replacement right so that a whole line of a centred (right-aligned) block stays
+    centred (flush right) in the original box; 0 when the line is left-aligned or has other text on it."""
+    layout = doc.layout(target.page_index)
+    line = layout.lines[part.line]
+    block = layout.blocks[line.block] if 0 <= line.block < len(layout.blocks) else None
+    if block is None or block.alignment not in ("center", "right"):
+        return 0.0
+    model = doc.model(target.page_index)
+    mine = set(part.glyphs)
+    if any(gid not in mine and not model.glyphs[gid].text.isspace() for gid in line.glyphs):
+        return 0.0
+    return slack / 2 if block.alignment == "center" else slack
 
 
 def fit_horizontal(doc: Document, target: Target, replacement: str, boundary: float) -> Fit:
@@ -357,8 +376,44 @@ def fit_horizontal(doc: Document, target: Target, replacement: str, boundary: fl
     for (p, x0, x1, after), g in zip(geo, groups):
         t = " ".join(g)
         w = widths_of(t)
-        parts.append(PartFit(p.line, t, font.encode(t), w, w, x1 - x0, x0, w - (x1 - x0), [a.gid for a in after]))
+        pf = PartFit(p.line, t, font.encode(t), w, w, x1 - x0, x0, w - (x1 - x0), [a.gid for a in after])
+        if len(geo) == 1 and w < x1 - x0 - 0.01:
+            _rejustify(doc, target, p, pf, _space_width_points(doc, target), first.x_scale * float(first.th))
+        parts.append(pf)
     return Fit("horizontal_expansion", True, "fits", parts, 1.0, float(size), float(size), boundary=boundary)
+
+
+def _rejustify(doc: Document, target: Target, part, pf: PartFit, space_pts: float, unit: float) -> None:
+    """A full line of a justified paragraph got shorter: spread the shortfall over the gaps from the replacement
+    to the end of the line (as justification does) so that the line still ends at the paragraph's right edge."""
+    layout = doc.layout(target.page_index)
+    line = layout.lines[part.line]
+    if not 0 <= line.block < len(layout.blocks):
+        return
+    block = layout.blocks[line.block]
+    if block.alignment != "justify" or line.index == block.lines[-1] or abs(line.x1 - block.right) > 0.6:
+        return
+    after = set(pf.after)
+    following = [w for w in line.words if w.glyphs and set(w.glyphs) <= after]
+    n_own = pf.text.count(" ")
+    gaps = n_own + len(following)
+    slack = pf.original_width - pf.width
+    if not following or slack / gaps > JUSTIFY_MAX_PER_SPACE * space_pts:
+        return
+    model = doc.model(target.page_index)
+    word_of = {gid: j for j, w in enumerate(following, 1) for gid in w.glyphs}
+    if any(gid not in word_of and not model.glyphs[gid].text.isspace() for gid in pf.after):
+        return  # the target ends inside a word: the rest of that word must stay attached to it
+    per_gap = slack / gaps
+    pf.word_kern = per_gap / unit if n_own else 0.0
+    starts = [(model.glyphs[w.glyphs[0]].x, j) for j, w in enumerate(following, 1)]
+    for gid in pf.after:
+        k = word_of.get(gid)
+        if k is None:  # a space moves with the word after it; anything after the last word keeps its place
+            x = model.glyphs[gid].x
+            k = next((j for sx, j in starts if sx >= x), len(following))
+        pf.after_shift[gid] = -slack + (n_own + k) * per_gap
+    pf.width = pf.original_width
 
 
 def fit_scaled(doc: Document, target: Target, replacement: str, min_scale: float = 0.9) -> Fit:
@@ -408,10 +463,11 @@ def _apply_fit(doc: Document, target: Target, fit: Fit, replacement: str) -> Met
     for tp, pf in zip(target.parts, fit.parts):
         anchor = tp.glyphs[0]
         plan.inserts.append(Insertion(anchor, pf.codes, size, space_adv, pf.text,
-                                      Decimal(str(round(pf.word_kern, 6))), Decimal(str(round(pf.char_kern, 6)))))
-        if pf.shift_after:
+                                      Decimal(str(round(pf.word_kern, 6))), Decimal(str(round(pf.char_kern, 6))),
+                                      Decimal(str(round(pf.lead, 6)))))
+        if pf.shift_after or pf.after_shift:
             for gid in pf.after:
-                plan.shift[gid] = pf.shift_after
+                plan.shift[gid] = pf.after_shift.get(gid, pf.shift_after)
     target_dict = target.to_dict()
     result: EditResult = apply_plan(doc, plan)
     bbox = result.bbox(first.font)

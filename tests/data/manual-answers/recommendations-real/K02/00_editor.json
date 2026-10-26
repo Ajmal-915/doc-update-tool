@@ -1,0 +1,14 @@
+{
+ "understanding": "Rename the first department under the Ministry of Agriculture.",
+ "edits": [
+  {
+   "line_ids": [
+    "L35"
+   ],
+   "current_text": "Department of Agriculture and Cooperation",
+   "new_text": "Department of Agriculture, Cooperation and Farmers Welfare",
+   "reason": "department name"
+  }
+ ],
+ "not_possible": []
+}

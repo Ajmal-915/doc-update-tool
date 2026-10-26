@@ -95,7 +95,7 @@ Rules:
   needs_clarification.
 - Anything that is not a replacement of existing text on this page goes into not_possible with the reason: adding
   or deleting whole paragraphs, table rows or columns, images, logos, colours or layout; text that is only part of an
-  image; changes on other pages.
+  image or is not in the listed lines (rotated text is not listed); changes on other pages.
 - Code checks every current_text against the page and runs each edit through separate safety checks; if an edit
   cannot be made safely, a person makes the whole change.
 Call the tool submit_edit_plan exactly once.
@@ -113,11 +113,12 @@ def editor_user(context: dict, image_info: dict) -> str:
         f"<recommendation>\n{rec}\n</recommendation>\n"
         f"The image is page {context['page']} of {context['page_count']}, "
         f"{image_info['width']}x{image_info['height']} pixels at {image_info['dpi']} dpi.\n"
-        + _rows_block(context["lines"], context["form_fields"], context.get("empty_form_fields", 0))
+        + _rows_block(context["lines"], context["form_fields"], context.get("empty_form_fields", 0),
+                      context.get("rotated_characters", 0))
     )
 
 
-def _rows_block(lines: list, fields: list, empty_fields: int = 0) -> str:
+def _rows_block(lines: list, fields: list, empty_fields: int = 0, rotated: int = 0) -> str:
     """One compact JSON row per line / field: ["L3", [x0, y0, x1, y1], "text"] and ["F1", "name", "value"]."""
     rows = ['"lines": [id, box_px, text]'] + [json.dumps([ln["id"], ln["box_px"], ln["text"]], ensure_ascii=False)
                                                for ln in lines]
@@ -125,6 +126,8 @@ def _rows_block(lines: list, fields: list, empty_fields: int = 0) -> str:
                                                      for f in fields]
     if empty_fields:
         rows.append(f'"empty_form_fields_not_listed": {int(empty_fields)}')
+    if rotated:
+        rows.append(f'"rotated_characters_not_listed": {int(rotated)}')
     text = "\n".join(rows).replace("</document_data", "<\\/document_data").replace("<document_data", "<\\document_data")
     return f"<document_data>\n{text}\n</document_data>"
 

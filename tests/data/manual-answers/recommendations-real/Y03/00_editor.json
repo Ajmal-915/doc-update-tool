@@ -1,0 +1,46 @@
+{
+ "understanding": "Replace every [NAME OF COMPANY] placeholder in the executive summary field with Northwind Group. The field also has a different placeholder, [COMPANY NAME], which the recommendation does not mention; it is left as it is.",
+ "edits": [
+  {
+   "line_ids": [
+    "F1"
+   ],
+   "current_text": "[NAME OF COMPANY] is an organized corporation",
+   "new_text": "Northwind Group is an organized corporation",
+   "reason": "occurrence 1"
+  },
+  {
+   "line_ids": [
+    "F1"
+   ],
+   "current_text": "[NAME OF COMPANY] was established",
+   "new_text": "Northwind Group was established",
+   "reason": "occurrence 2"
+  },
+  {
+   "line_ids": [
+    "F1"
+   ],
+   "current_text": "[NAME OF COMPANY] employed",
+   "new_text": "Northwind Group employed",
+   "reason": "occurrence 3"
+  },
+  {
+   "line_ids": [
+    "F1"
+   ],
+   "current_text": "[NAME OF COMPANY] is proud",
+   "new_text": "Northwind Group is proud",
+   "reason": "occurrence 4"
+  },
+  {
+   "line_ids": [
+    "F1"
+   ],
+   "current_text": "into [NAME OF COMPANY]’s current",
+   "new_text": "into Northwind Group’s current",
+   "reason": "occurrence 5"
+  }
+ ],
+ "not_possible": []
+}

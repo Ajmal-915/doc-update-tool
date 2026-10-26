@@ -9,3 +9,6 @@ tests/data/generated-cases/
 tests/data/recorded/live/
 tests/data/manual-answers/**/*.png
 tests/data/manual-answers/**/*.request.md
+
+# third-party PDFs used by tests/data/recommendations/real-world.json (not redistributed)
+tests/data/real-world-pdfs/

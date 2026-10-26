@@ -1,0 +1,14 @@
+{
+ "understanding": "Paul Syverson's affiliation line becomes U.S. Naval Research Laboratory.",
+ "edits": [
+  {
+   "line_ids": [
+    "L9"
+   ],
+   "current_text": "Naval Research Lab",
+   "new_text": "U.S. Naval Research Laboratory",
+   "reason": "affiliation"
+  }
+ ],
+ "not_possible": []
+}

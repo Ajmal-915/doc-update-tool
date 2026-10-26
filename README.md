@@ -84,7 +84,9 @@ us as Northwind Group instead of Smartsheet"*.
 
 1. **Screenshot and text (code).** The page is rendered at 150 dpi, and its text
    is listed as numbered lines (L1, L2, … in reading order, with their position in
-   the image), together with its filled form fields (F1, …).
+   the image), together with its filled form fields (F1, …). Rotated text is
+   left out, because it cannot be edited; the listing says how many such characters
+   there are.
 2. **Edit plan (LLM, "editor" role).** The model gets the screenshot, the listing
    and the recommendation. It returns:
    - one edit per change: the exact current text copied from the listing, the new
@@ -227,6 +229,15 @@ With your key, `--provider bedrock` alone runs everything through Bedrock:
 ```powershell
 python -m doc_update.recommend_pack --pack "tests\data\recommendations\year-end.json" --provider offline --editor-provider manual --manual-dir "tests\data\manual-answers\recommendations"
 python -m doc_update.recommend_pack --pack "tests\data\recommendations\year-end.json" --provider bedrock
+```
+
+`tests\data\recommendations\real-world.json` has 38 more. They run on the year-end report, a page with an
+instruction aimed at AI models, and 12 third-party PDFs. Hand-written edit plans for all 38 are in
+`tests\data\manual-answers\recommendations-real`. The third-party PDFs are not included: put them in
+`tests\data\real-world-pdfs`, under the file names the pack gives. Rows whose PDF is missing are skipped.
+
+```powershell
+python -m doc_update.recommend_pack --pack "tests\data\recommendations\real-world.json" --provider offline --editor-provider manual --manual-dir "tests\data\manual-answers\recommendations-real"
 ```
 
 Corpus test on any folder of PDFs (your own documents, or a downloaded collection).

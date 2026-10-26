@@ -102,7 +102,11 @@ def fit_reflow(doc: Document, target: Target, replacement: str, boundary: float 
     cur: list[str] = []
     cur_w = 0.0
     for w in words:
-        ww = width(w)
+        try:
+            ww = width(w)
+        except Exception as exc:  # the paragraph has text the font cannot re-encode (e.g. glyphs missing from the subset)
+            return Fit("paragraph_reflow", False, f"the paragraph cannot be rewritten in its font: "
+                                                  f"{getattr(exc, 'message', str(exc))}")
         avail = right - starts[len(out_lines)]
         if ww > avail + 0.01:
             return Fit("paragraph_reflow", False, f"the word {w!r} is wider than the paragraph")

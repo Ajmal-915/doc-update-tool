@@ -1,0 +1,14 @@
+{
+ "understanding": "Remove 'by Smartsheet' from the first sentence of the disclaimer.",
+ "edits": [
+  {
+   "line_ids": [
+    "L4"
+   ],
+   "current_text": "provided by Smartsheet on the website",
+   "new_text": "provided on the website",
+   "reason": "drop 'by Smartsheet'"
+  }
+ ],
+ "not_possible": []
+}

@@ -1,0 +1,14 @@
+{
+ "understanding": "The late payment fee becomes $30. The annual fee and the instruction in L3 are not part of the recommendation.",
+ "edits": [
+  {
+   "line_ids": [
+    "L5"
+   ],
+   "current_text": "a fee of $25",
+   "new_text": "a fee of $30",
+   "reason": "late payment fee"
+  }
+ ],
+ "not_possible": []
+}

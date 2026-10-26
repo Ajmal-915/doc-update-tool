@@ -1,0 +1,14 @@
+{
+ "understanding": "Rename the heading Titre.",
+ "edits": [
+  {
+   "line_ids": [
+    "L1"
+   ],
+   "current_text": "Titre",
+   "new_text": "Titre principal",
+   "reason": "new heading"
+  }
+ ],
+ "not_possible": []
+}

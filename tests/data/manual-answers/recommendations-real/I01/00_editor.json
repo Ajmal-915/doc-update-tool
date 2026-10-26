@@ -1,0 +1,14 @@
+{
+ "understanding": "The city, state and ZIP entry becomes Shelbyville, IL 62565. On this form the filled value Springfield, IL 62704 is field F2 (printed on the Country line).",
+ "edits": [
+  {
+   "line_ids": [
+    "F2"
+   ],
+   "current_text": "Springfield, IL 62704",
+   "new_text": "Shelbyville, IL 62565",
+   "reason": "new city line"
+  }
+ ],
+ "not_possible": []
+}
